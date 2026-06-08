@@ -28,12 +28,27 @@
             border-radius: 32px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
             position: relative;
+            max-width: 100%;
+            overflow-x: auto;
         }
         
         /* Контейнер для доски с координатами */
+        .board-wrapper {
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+        
         .board-container {
             display: inline-block;
             position: relative;
+            margin-left: 30px; /* Отступ для цифр слева */
+        }
+        
+        @media (max-width: 600px) {
+            .board-container {
+                margin-left: 25px;
+            }
         }
         
         .board {
@@ -43,8 +58,8 @@
             border: 3px solid #654321;
             border-radius: 8px;
             overflow: hidden;
-            width: min(70vw, 70vh, 600px);
-            height: min(70vw, 70vh, 600px);
+            width: min(70vw, 70vh, 500px);
+            height: min(70vw, 70vh, 500px);
             position: relative;
             z-index: 1;
         }
@@ -53,28 +68,28 @@
         .file-labels {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
-            width: min(70vw, 70vh, 600px);
+            width: min(70vw, 70vh, 500px);
             margin-top: 5px;
             text-align: center;
             font-family: monospace;
             font-weight: bold;
             color: #c99e6f;
-            font-size: 14px;
+            font-size: 12px;
         }
         
-        /* Численные обозначения (слева) */
+        /* Численные обозначения (слева) - абсолютное позиционирование */
         .rank-labels {
             position: absolute;
             left: -25px;
             top: 0;
-            height: min(70vw, 70vh, 600px);
+            height: min(70vw, 70vh, 500px);
             display: flex;
             flex-direction: column;
             justify-content: space-around;
             font-family: monospace;
             font-weight: bold;
             color: #c99e6f;
-            font-size: 14px;
+            font-size: 12px;
             width: 20px;
             text-align: right;
         }
@@ -86,11 +101,28 @@
             height: 12.5%;
         }
         
+        @media (max-width: 600px) {
+            .rank-labels {
+                left: -20px;
+                font-size: 10px;
+            }
+            .file-labels {
+                font-size: 10px;
+            }
+            .board {
+                width: min(85vw, 85vh, 450px);
+                height: min(85vw, 85vh, 450px);
+            }
+            .file-labels {
+                width: min(85vw, 85vh, 450px);
+            }
+        }
+        
         .cell {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: min(6vw, 6vh, 48px);
+            font-size: min(6vw, 6vh, 40px);
             cursor: pointer;
             transition: 0.05s linear;
             aspect-ratio: 1 / 1;
@@ -103,36 +135,65 @@
         .cell.last-move { background: #b7d968 !important; }
         .cell.check { background: #ff4444 !important; animation: pulse 0.5s; }
         @keyframes pulse { 0%,100% { background: #ff4444; } 50% { background: #ff0000; } }
-        .controls { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
         button {
-            background: #4a3620; border: none; color: #ffefcf; padding: 10px 20px;
-            font-size: 16px; font-weight: bold; border-radius: 40px; cursor: pointer;
+            background: #4a3620; border: none; color: #ffefcf; padding: 8px 16px;
+            font-size: 14px; font-weight: bold; border-radius: 40px; cursor: pointer;
             transition: 0.1s; font-family: monospace;
         }
         button:active { transform: scale(0.96); background: #2d1f10; }
+        
         .online-panel {
-            background: #1f2a1b; padding: 8px 16px; border-radius: 60px;
-            display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap;
+            background: #1f2a1b; padding: 5px 12px; border-radius: 60px;
+            display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
         }
         .online-status { background: #2a4a2a; padding: 4px 8px; border-radius: 20px; font-size: 11px; }
         .online-status.connected { background: #2a6a2a; }
         .online-status.waiting { background: #6a4a2a; }
+        
         .first-move-selector {
-            background: #2a4a2a; padding: 5px 12px; border-radius: 40px;
-            display: inline-flex; gap: 10px; align-items: center;
+            background: #2a4a2a; padding: 4px 10px; border-radius: 40px;
+            display: inline-flex; gap: 8px; align-items: center;
         }
-        .first-move-selector span { font-size: 12px; color: #ffdd99; }
-        .first-move-btn { padding: 4px 12px; font-size: 12px; background: #3e2a1a; }
+        .first-move-selector span { font-size: 11px; color: #ffdd99; }
+        .first-move-btn { padding: 3px 10px; font-size: 11px; background: #3e2a1a; }
         .first-move-btn.active-first { background: #c99e6f; color: #1e2a0e; }
-        .status { background: #1f1a0e; color: #ffdd99; padding: 8px 16px; border-radius: 32px; font-size: 14px; text-align: center; }
-        .piece-palette { display: flex; gap: 5px; background: #3e2a1a; padding: 8px; border-radius: 60px; flex-wrap: wrap; }
-        .piece-icon { font-size: 28px; background: #5e3a1e; padding: 4px 10px; border-radius: 30px; cursor: grab; }
+        
+        .status { background: #1f1a0e; color: #ffdd99; padding: 6px 12px; border-radius: 32px; font-size: 12px; text-align: center; }
+        
+        /* Палитра фигур — переносим в отдельную строку */
+        .piece-palette {
+            display: flex;
+            gap: 5px;
+            background: #3e2a1a;
+            padding: 8px;
+            border-radius: 60px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .piece-icon {
+            font-size: 24px;
+            background: #5e3a1e;
+            padding: 4px 8px;
+            border-radius: 30px;
+            cursor: grab;
+        }
         .piece-icon:active { background: #b87c3a; }
-        .history-panel { background: #1f1a0e; border-radius: 16px; padding: 10px; margin-top: 15px; max-height: 150px; overflow-y: auto; }
-        .history-title { color: #ffdd99; font-size: 12px; margin-bottom: 8px; text-align: center; }
-        .history-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-        .history-item { background: #3e2a1a; color: #ffefcf; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-family: monospace; cursor: pointer; }
+        
+        .history-panel { background: #1f1a0e; border-radius: 16px; padding: 8px; margin-top: 12px; max-height: 120px; overflow-y: auto; }
+        .history-title { color: #ffdd99; font-size: 11px; margin-bottom: 6px; text-align: center; }
+        .history-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+        .history-item { background: #3e2a1a; color: #ffefcf; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-family: monospace; cursor: pointer; }
         .history-item.current { background: #c99e6f; color: #1e2a0e; }
+        
         .promotion-dialog {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: #2b1b0e; padding: 20px; border-radius: 16px; border: 2px solid #c99e6f;
@@ -140,65 +201,69 @@
         }
         .promotion-dialog button { margin: 0 5px; padding: 8px 15px; font-size: 20px; }
         .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1999; }
-        .room-code { font-size: 20px; font-weight: bold; background: #1f1a0e; padding: 4px 12px; border-radius: 40px; letter-spacing: 2px; }
-        .player-role { background: #2a4a2a; padding: 5px 10px; border-radius: 20px; font-size: 12px; text-align: center; margin-top: 8px; display: inline-block; }
+        
+        .room-code { font-size: 18px; font-weight: bold; background: #1f1a0e; padding: 3px 10px; border-radius: 40px; letter-spacing: 2px; }
+        .player-role { background: #2a4a2a; padding: 4px 10px; border-radius: 20px; font-size: 11px; text-align: center; margin-top: 8px; display: inline-block; }
+        
         @media (max-width: 600px) {
-            .piece-icon { font-size: 20px; padding: 2px 8px; }
-            button { padding: 6px 12px; font-size: 12px; }
+            .piece-icon { font-size: 18px; padding: 2px 6px; }
+            button { padding: 5px 12px; font-size: 11px; }
             .first-move-btn { padding: 2px 8px; font-size: 10px; }
-            .rank-labels { left: -18px; font-size: 10px; }
-            .file-labels { font-size: 10px; }
+            .history-item { font-size: 9px; padding: 2px 6px; }
+            .status { font-size: 10px; }
+            .controls { gap: 6px; }
         }
     </style>
 </head>
 <body>
 <div>
     <div class="game-container">
-        <div class="board-container">
-            <div class="rank-labels" id="rankLabels"></div>
-            <div class="board" id="board"></div>
-            <div class="file-labels" id="fileLabels"></div>
+        <div class="board-wrapper">
+            <div class="board-container">
+                <div class="rank-labels" id="rankLabels"></div>
+                <div class="board" id="board"></div>
+                <div class="file-labels" id="fileLabels"></div>
+            </div>
         </div>
         
         <div class="controls">
-            <button id="onlineModeBtn" style="background:#2a6a2a">🌐 Онлайн-режим</button>
-            <button id="localModeBtn" style="background:#4a3620">🏠 Локальный режим</button>
+            <button id="onlineModeBtn" style="background:#2a6a2a">🌐 Онлайн</button>
+            <button id="localModeBtn" style="background:#4a3620">🏠 Локально</button>
             
             <div id="onlinePanel" style="display: none;" class="online-panel">
-                <button id="createRoomBtn">➕ Создать комнату</button>
-                <input type="text" id="roomCodeInput" placeholder="Код комнаты" maxlength="6">
-                <button id="joinRoomBtn">🔗 Присоединиться</button>
-                <span id="onlineStatus" class="online-status waiting">⚪ Не в сети</span>
+                <button id="createRoomBtn">➕ Создать</button>
+                <input type="text" id="roomCodeInput" placeholder="Код" maxlength="6" style="width:70px">
+                <button id="joinRoomBtn">🔗 Войти</button>
+                <span id="onlineStatus" class="online-status waiting">⚪</span>
             </div>
             
             <div id="roomInfo" style="display: none;" class="online-panel">
                 <span>🏠 Код: </span>
                 <span id="roomCodeDisplay" class="room-code"></span>
-                <button id="copyRoomCodeBtn">📋 Копировать</button>
-                <button id="leaveRoomBtn">🚪 Выйти</button>
+                <button id="copyRoomCodeBtn">📋</button>
+                <button id="leaveRoomBtn">🚪</button>
             </div>
             
             <div class="first-move-selector">
-                <span>🎯 Первый ход:</span>
-                <button id="firstMoveWhite" class="first-move-btn active-first">⚪ Белые</button>
-                <button id="firstMoveBlack" class="first-move-btn">⚫ Чёрные</button>
+                <span>🎯 Первый:</span>
+                <button id="firstMoveWhite" class="first-move-btn active-first">⚪</button>
+                <button id="firstMoveBlack" class="first-move-btn">⚫</button>
             </div>
             
-            <button id="startGameBtn">▶ СТАРТ ИГРЫ</button>
-            <button id="newGameBtn">♔ Новая партия</button>
-            <button id="undoBtn">↩ Отмена хода</button>
-            <button id="resetBtn">🔄 Сброс к старту</button>
-            <button id="clearBoardBtn">🗑 Очистить доску</button>
+            <button id="startGameBtn">▶ СТАРТ</button>
+            <button id="newGameBtn">♔ Новая</button>
+            <button id="undoBtn">↩ Отмена</button>
+            <button id="resetBtn">🔄 Сброс</button>
+            <button id="clearBoardBtn">🗑 Очистить</button>
         </div>
         
-        <div style="display: flex; justify-content: space-between; margin-top: 12px; gap: 8px; flex-wrap: wrap;">
-            <div class="status" id="gameStatus">⚙️ РЕЖИМ РАССТАНОВКИ</div>
-            <div class="piece-palette" id="piecePalette"></div>
-        </div>
+        <div class="piece-palette" id="piecePalette"></div>
         
         <div style="text-align: center;">
             <div id="playerRoleDisplay" class="player-role" style="display: none;"></div>
         </div>
+        
+        <div class="status" id="gameStatus">⚙️ РЕЖИМ РАССТАНОВКИ</div>
 
         <div class="history-panel" id="historyPanel" style="display: none;">
             <div class="history-title">📜 ИСТОРИЯ ХОДОВ</div>
@@ -206,9 +271,9 @@
         </div>
     </div>
     
-    <p style="color: #d4c2a5; font-size: 12px; text-align: center; margin-top: 12px;">
-        🌐 <strong>ОНЛАЙН-РЕЖИМ:</strong> Создайте комнату → отправьте код ученику → нажмите СТАРТ!<br>
-        🏠 <strong>ЛОКАЛЬНЫЙ РЕЖИМ:</strong> Играйте вдвоём за одним устройством.
+    <p style="color: #d4c2a5; font-size: 11px; text-align: center; margin-top: 10px;">
+        🌐 Онлайн: создайте комнату → отправьте код → нажмите СТАРТ<br>
+        🏠 Локально: играйте вдвоём за одним устройством
     </p>
 </div>
 
@@ -283,18 +348,13 @@
     let castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
     let waitingForPromotion = false;
 
-    // ---------- НОВАЯ ПАРТИЯ (стандартная расстановка) ----------
+    // Стандартная расстановка
     function setupStandardPosition() {
-        // Очищаем доску
         board = Array(8).fill().map(() => Array(8).fill(null));
-        
-        // Пешки
         for (let i = 0; i < 8; i++) {
             board[6][i] = { type: 'pawn', color: 'white' };
             board[1][i] = { type: 'pawn', color: 'black' };
         }
-        
-        // Белые фигуры
         board[7][0] = { type: 'rook', color: 'white' };
         board[7][1] = { type: 'knight', color: 'white' };
         board[7][2] = { type: 'bishop', color: 'white' };
@@ -304,7 +364,6 @@
         board[7][6] = { type: 'knight', color: 'white' };
         board[7][7] = { type: 'rook', color: 'white' };
         
-        // Чёрные фигуры
         board[0][0] = { type: 'rook', color: 'black' };
         board[0][1] = { type: 'knight', color: 'black' };
         board[0][2] = { type: 'bishop', color: 'black' };
@@ -314,7 +373,6 @@
         board[0][6] = { type: 'knight', color: 'black' };
         board[0][7] = { type: 'rook', color: 'black' };
         
-        // Сбрасываем состояние игры
         if (gameActive) {
             gameActive = false;
             document.getElementById('historyPanel').style.display = 'none';
@@ -327,14 +385,10 @@
         currentTurn = firstTurn;
         enPassantTarget = null;
         castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
-        
         renderBoard();
         updateHistoryPanel();
         updateGameStatus();
-        
         if (isOnlineMode && currentRoomId && database) syncToFirebase();
-        
-        alert('✅ Новая партия! Фигуры расставлены стандартно.');
     }
 
     function copyBoard(src) {
@@ -365,22 +419,6 @@
         return newBoard;
     }
     
-    // Очистка данных перед отправкой в Firebase
-    function cleanForFirebase(obj) {
-        if (obj === undefined || obj === null) return null;
-        if (typeof obj === 'object') {
-            const clean = {};
-            for (const key in obj) {
-                const val = cleanForFirebase(obj[key]);
-                if (val !== undefined && val !== null) {
-                    clean[key] = val;
-                }
-            }
-            return clean;
-        }
-        return obj;
-    }
-    
     function syncToFirebase() {
         if (!isOnlineMode || !currentRoomId || !database) return;
         
@@ -391,8 +429,7 @@
             lastMove: lastMove ? { from: lastMove.from, to: lastMove.to } : null,
             moveNotations: moveNotations || [],
             enPassantTarget: (enPassantTarget && typeof enPassantTarget.x === 'number' && typeof enPassantTarget.y === 'number') 
-                ? { x: enPassantTarget.x, y: enPassantTarget.y } 
-                : null,
+                ? { x: enPassantTarget.x, y: enPassantTarget.y } : null,
             castlingRights: {
                 white: { king: castlingRights.white?.king === true, queen: castlingRights.white?.queen === true },
                 black: { king: castlingRights.black?.king === true, queen: castlingRights.black?.queen === true }
@@ -446,7 +483,6 @@
         return true;
     }
 
-    // Проверка находится ли клетка под атакой
     function isSquareAttacked(x, y, color, testBoard) {
         for (let i = 0; i < 8; i++) {
             for (let j = 0; j < 8; j++) {
@@ -459,7 +495,6 @@
         return false;
     }
 
-    // Базовая проверка хода (без проверки шаха)
     function isValidMoveSimple(fromX, fromY, toX, toY, testBoard, movingColor) {
         if (!testBoard[fromX] || !testBoard[fromX][fromY]) return false;
         const piece = testBoard[fromX][fromY];
@@ -478,20 +513,15 @@
             case 'pawn':
                 const dir = piece.color === 'white' ? -1 : 1;
                 const startRow = piece.color === 'white' ? 6 : 1;
-                // Обычный ход вперёд
                 if (dx === dir && dy === 0 && !target) return true;
-                // Ход на две клетки
                 if (dx === 2 * dir && dy === 0 && !target && fromX === startRow && !testBoard[fromX + dir]?.[fromY]) return true;
-                // Взятие
                 if (dx === dir && Math.abs(dy) === 1 && target) return true;
-                // Взятие на проходе
                 if (dx === dir && Math.abs(dy) === 1 && !target && enPassantTarget && enPassantTarget.x === toX && enPassantTarget.y === toY) return true;
                 return false;
             case 'knight':
                 return (absDx === 2 && absDy === 1) || (absDx === 1 && absDy === 2);
             case 'king':
                 if (Math.max(absDx, absDy) === 1) return true;
-                // РОКИРОВКА
                 if (dx === 0 && Math.abs(dy) === 2 && gameActive) {
                     const row = piece.color === 'white' ? 7 : 0;
                     if (fromX !== row || fromY !== 4) return false;
@@ -506,7 +536,6 @@
                     const rights = piece.color === 'white' ? castlingRights.white : castlingRights.black;
                     if (isKingSide && !rights.king) return false;
                     if (!isKingSide && !rights.queen) return false;
-                    // Проверка, что король не проходит под шах
                     for (let step = 0; step <= Math.abs(dy); step++) {
                         const testY = fromY + (dy > 0 ? step : -step);
                         const fakeBoard = copyBoard(testBoard);
@@ -538,7 +567,7 @@
         }
     }
 
-    // Проверка хода с учётом шаха
+    // Проверка хода с учётом шаха (НЕ запрещаем ход, если фигура под боем)
     function isValidMoveWithCheck(fromX, fromY, toX, toY) {
         if (!board[fromX] || !board[fromX][fromY]) return false;
         const piece = board[fromX][fromY];
@@ -574,7 +603,19 @@
             testBoard[fromX][fromY] = null;
         }
         
-        return !isSquareAttacked(toX, toY, movingPiece.color, testBoard);
+        // НЕ ЗАПРЕЩАЕМ ход, если фигура под боем
+        // Только проверяем, что свой король не остался под шахом
+        return !isSquareAttacked(getKingPos(movingPiece.color, testBoard)[0], getKingPos(movingPiece.color, testBoard)[1], movingPiece.color, testBoard);
+    }
+    
+    function getKingPos(color, testBoard) {
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const p = testBoard[i]?.[j];
+                if (p && p.type === 'king' && p.color === color) return [i, j];
+            }
+        }
+        return [-1, -1];
     }
 
     function getAllValidMovesForPiece(x, y) {
@@ -590,21 +631,15 @@
     }
 
     function showPromotionDialog(callback) {
-        const overlay = document.createElement('div');
-        overlay.className = 'overlay';
-        const dialog = document.createElement('div');
-        dialog.className = 'promotion-dialog';
+        const overlay = document.createElement('div'); overlay.className = 'overlay';
+        const dialog = document.createElement('div'); dialog.className = 'promotion-dialog';
         dialog.innerHTML = `<p>Выберите фигуру:</p>
-            <button data-piece="queen">♕ Ферзь</button>
-            <button data-piece="rook">♖ Ладья</button>
-            <button data-piece="bishop">♗ Слон</button>
-            <button data-piece="knight">♘ Конь</button>`;
-        document.body.appendChild(overlay);
-        document.body.appendChild(dialog);
+            <button data-piece="queen">♕</button><button data-piece="rook">♖</button>
+            <button data-piece="bishop">♗</button><button data-piece="knight">♘</button>`;
+        document.body.appendChild(overlay); document.body.appendChild(dialog);
         dialog.querySelectorAll('button').forEach(btn => {
             btn.onclick = () => {
-                overlay.remove();
-                dialog.remove();
+                overlay.remove(); dialog.remove();
                 callback(btn.dataset.piece);
             };
         });
@@ -625,7 +660,7 @@
             const testBoard = copyBoard(board);
             testBoard[toX][toY] = piece;
             testBoard[fromX][fromY] = null;
-            return isSquareAttacked(toX, toY, piece.color, testBoard);
+            return isSquareAttacked(getKingPos(piece.color, testBoard)[0], getKingPos(piece.color, testBoard)[1], piece.color, testBoard);
         })();
         
         const files = 'abcdefgh';
@@ -640,7 +675,6 @@
         
         if (gameActive) saveToHistory(notation);
         
-        // Обновление прав рокировки
         if (piece.type === 'king') {
             if (piece.color === 'white') castlingRights.white = { king: false, queen: false };
             else castlingRights.black = { king: false, queen: false };
@@ -657,7 +691,6 @@
             newEnPassantTarget = { x: (fromX + toX) / 2, y: fromY };
         }
         
-        // Выполнение хода
         if (isCastle) {
             const row = piece.color === 'white' ? 7 : 0;
             const isKingSide = toY > fromY;
@@ -891,19 +924,13 @@
     }
     
     function updateCoordinates() {
-        // Обновляем буквенные обозначения (a-h)
         const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
         const fileLabels = document.getElementById('fileLabels');
-        if (fileLabels) {
-            fileLabels.innerHTML = files.map(f => `<span>${f}</span>`).join('');
-        }
+        if (fileLabels) fileLabels.innerHTML = files.map(f => `<span>${f}</span>`).join('');
         
-        // Обновляем численные обозначения (1-8)
         const ranks = [8, 7, 6, 5, 4, 3, 2, 1];
         const rankLabels = document.getElementById('rankLabels');
-        if (rankLabels) {
-            rankLabels.innerHTML = ranks.map(r => `<span>${r}</span>`).join('');
-        }
+        if (rankLabels) rankLabels.innerHTML = ranks.map(r => `<span>${r}</span>`).join('');
     }
     
     function buildPalette() {
@@ -958,7 +985,7 @@
     }
     
     async function createRoom() {
-        if (!database) { alert('Firebase не подключен! Проверьте интернет.'); return; }
+        if (!database) { alert('Firebase не подключен!'); return; }
         
         const roomCode = generateRoomCode();
         currentRoomId = roomCode;
@@ -976,10 +1003,7 @@
                 gameActive: false,
                 lastMove: null,
                 enPassantTarget: null,
-                castlingRights: { 
-                    white: { king: true, queen: true }, 
-                    black: { king: true, queen: true } 
-                },
+                castlingRights: { white: { king: true, queen: true }, black: { king: true, queen: true } },
                 moveNotations: []
             }
         };
@@ -989,29 +1013,28 @@
             document.getElementById('roomCodeDisplay').innerText = roomCode;
             document.getElementById('roomInfo').style.display = 'inline-flex';
             document.getElementById('onlineStatus').className = 'online-status waiting';
-            document.getElementById('onlineStatus').innerHTML = '⏳ Ожидание игрока...';
+            document.getElementById('onlineStatus').innerHTML = '⏳';
             document.getElementById('playerRoleDisplay').style.display = 'block';
-            document.getElementById('playerRoleDisplay').innerHTML = '🎮 Ваша роль: БЕЛЫЕ (создатель)';
+            document.getElementById('playerRoleDisplay').innerHTML = '🎮 БЕЛЫЕ (создатель)';
             
             listenToFirebase();
-            alert(`✅ Комната создана! Код: ${roomCode}\nОтправьте этот код ученику.`);
+            alert(`✅ Комната создана! Код: ${roomCode}`);
             
             database.ref(`rooms/${roomCode}/blackPlayer`).on('value', (snapshot) => {
                 if (snapshot.val()) {
                     document.getElementById('onlineStatus').className = 'online-status connected';
-                    document.getElementById('onlineStatus').innerHTML = '✅ Противник подключён!';
-                    alert('✅ Противник подключился! Можете начинать игру.');
+                    document.getElementById('onlineStatus').innerHTML = '✅';
+                    alert('✅ Противник подключился!');
                 }
             });
         } catch(e) {
-            console.error('Create room error:', e);
-            alert('Ошибка создания комнаты: ' + e.message);
+            alert('Ошибка: ' + e.message);
         }
     }
     
     async function joinRoom() {
         const roomCode = document.getElementById('roomCodeInput').value.toUpperCase().trim();
-        if (!roomCode) { alert('Введите код комнаты!'); return; }
+        if (!roomCode) { alert('Введите код!'); return; }
         if (!database) { alert('Firebase не подключен!'); return; }
         
         try {
@@ -1019,7 +1042,7 @@
             const snapshot = await roomRef.get();
             
             if (!snapshot.exists()) { alert('❌ Комната не найдена!'); return; }
-            if (snapshot.val().blackPlayer) { alert('❌ Комната уже заполнена!'); return; }
+            if (snapshot.val().blackPlayer) { alert('❌ Комната заполнена!'); return; }
             
             currentRoomId = roomCode;
             myPlayerId = auth?.currentUser?.uid || 'player_' + Date.now();
@@ -1035,8 +1058,6 @@
                 gameActive = roomData.gameState.gameActive;
                 lastMove = roomData.gameState.lastMove;
                 moveNotations = roomData.gameState.moveNotations || [];
-                enPassantTarget = roomData.gameState.enPassantTarget;
-                castlingRights = roomData.gameState.castlingRights || { white: { king: true, queen: true }, black: { king: true, queen: true } };
                 renderBoard();
                 updateHistoryPanel();
                 updateGameStatus();
@@ -1045,15 +1066,14 @@
             document.getElementById('roomCodeDisplay').innerText = roomCode;
             document.getElementById('roomInfo').style.display = 'inline-flex';
             document.getElementById('onlineStatus').className = 'online-status connected';
-            document.getElementById('onlineStatus').innerHTML = '✅ Подключено!';
+            document.getElementById('onlineStatus').innerHTML = '✅';
             document.getElementById('playerRoleDisplay').style.display = 'block';
-            document.getElementById('playerRoleDisplay').innerHTML = '🎮 Ваша роль: ЧЁРНЫЕ (гость)';
+            document.getElementById('playerRoleDisplay').innerHTML = '🎮 ЧЁРНЫЕ (гость)';
             
             listenToFirebase();
-            alert(`✅ Вы присоединились к комнате ${roomCode}!`);
+            alert(`✅ Присоединились к ${roomCode}!`);
         } catch(e) {
-            console.error('Join room error:', e);
-            alert('Ошибка подключения: ' + e.message);
+            alert('Ошибка: ' + e.message);
         }
     }
     
@@ -1064,10 +1084,9 @@
         isOnlineMode = false;
         document.getElementById('roomInfo').style.display = 'none';
         document.getElementById('onlineStatus').className = 'online-status waiting';
-        document.getElementById('onlineStatus').innerHTML = '⚪ Не в сети';
+        document.getElementById('onlineStatus').innerHTML = '⚪';
         document.getElementById('playerRoleDisplay').style.display = 'none';
         if (firebaseListener) firebaseListener();
-        alert('Вы вышли из комнаты');
     }
     
     function copyRoomCode() {
@@ -1083,7 +1102,7 @@
         } else if (isOnlineMode && myRole) {
             statusDiv.innerHTML = currentTurn === myRole ? '🔥 ВАШ ХОД!' : `⏳ Ход ${currentTurn === 'white' ? 'БЕЛЫХ' : 'ЧЁРНЫХ'}`;
         } else {
-            statusDiv.innerHTML = `♟ ИГРА ИДЕТ, ход: ${currentTurn === 'white' ? '⚪ белые' : '⚫ черные'}`;
+            statusDiv.innerHTML = `♟ ХОД: ${currentTurn === 'white' ? 'БЕЛЫЕ' : 'ЧЁРНЫЕ'}`;
         }
     }
     
@@ -1110,8 +1129,6 @@
     function init() {
         buildPalette();
         updateCoordinates();
-        
-        // Стандартная начальная позиция
         setupStandardPosition();
         
         document.getElementById('onlineModeBtn').onclick = switchToOnlineMode;
