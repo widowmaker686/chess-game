@@ -246,26 +246,35 @@
     
     function dataToBoard(data) {
         const newBoard = Array(8).fill().map(() => Array(8).fill(null));
-        if (!data) return newBoard;
+        if (!data || !Array.isArray(data)) return newBoard;
         for (const item of data) {
-            if (item && item.x >= 0 && item.x < 8 && item.y >= 0 && item.y < 8) {
+            if (item && typeof item.x === 'number' && typeof item.y === 'number' && 
+                item.x >= 0 && item.x < 8 && item.y >= 0 && item.y < 8 &&
+                item.type && item.color) {
                 newBoard[item.x][item.y] = { type: item.type, color: item.color };
             }
         }
         return newBoard;
     }
     
+    // ---------- ИСПРАВЛЕННЫЕ ФУНКЦИИ СИНХРОНИЗАЦИИ ----------
     function syncToFirebase() {
         if (!isOnlineMode || !currentRoomId || !database) return;
+        
+        const cleanEnPassantTarget = enPassantTarget ? { x: enPassantTarget.x, y: enPassantTarget.y } : null;
+        const cleanLastMove = lastMove ? { from: lastMove.from, to: lastMove.to } : null;
         
         const gameState = {
             board: boardToData(),
             currentTurn: currentTurn,
             gameActive: gameActive,
-            lastMove: lastMove ? { from: lastMove.from, to: lastMove.to } : null,
+            lastMove: cleanLastMove,
             moveNotations: moveNotations || [],
-            enPassantTarget: enPassantTarget,
-            castlingRights: castlingRights,
+            enPassantTarget: cleanEnPassantTarget,
+            castlingRights: {
+                white: { king: castlingRights.white?.king ?? true, queen: castlingRights.white?.queen ?? true },
+                black: { king: castlingRights.black?.king ?? true, queen: castlingRights.black?.queen ?? true }
+            },
             timestamp: Date.now()
         };
         
@@ -277,13 +286,21 @@
             moveHistory = moveHistory.slice(0, currentHistoryIndex + 1);
             moveNotations = moveNotations.slice(0, currentHistoryIndex);
         }
+        
+        const cleanEnPassantTarget = enPassantTarget ? { x: enPassantTarget.x, y: enPassantTarget.y } : null;
+        const cleanLastMove = lastMove ? { from: [...lastMove.from], to: [...lastMove.to] } : null;
+        
         moveHistory.push({
             board: copyBoard(board),
-            enPassantTarget: enPassantTarget ? { x: enPassantTarget.x, y: enPassantTarget.y } : null,
-            castlingRights: { white: { ...castlingRights.white }, black: { ...castlingRights.black } },
+            enPassantTarget: cleanEnPassantTarget,
+            castlingRights: {
+                white: { ...castlingRights.white },
+                black: { ...castlingRights.black }
+            },
             currentTurn: currentTurn,
-            lastMove: lastMove ? { from: [...lastMove.from], to: [...lastMove.to] } : null
+            lastMove: cleanLastMove
         });
+        
         if (notation) moveNotations.push(notation);
         currentHistoryIndex = moveHistory.length - 1;
         updateHistoryPanel();
@@ -295,7 +312,10 @@
         const state = moveHistory[index];
         board = copyBoard(state.board);
         enPassantTarget = state.enPassantTarget ? { x: state.enPassantTarget.x, y: state.enPassantTarget.y } : null;
-        castlingRights = { white: { ...state.castlingRights.white }, black: { ...state.castlingRights.black } };
+        castlingRights = {
+            white: { ...state.castlingRights.white },
+            black: { ...state.castlingRights.black }
+        };
         currentTurn = state.currentTurn;
         lastMove = state.lastMove ? { from: [...state.lastMove.from], to: [...state.lastMove.to] } : null;
         currentHistoryIndex = index;
@@ -307,6 +327,7 @@
         return true;
     }
 
+    // Проверка находится ли клетка под атакой
     function isSquareAttacked(x, y, color, testBoard) {
         for (let i = 0; i < 8; i++) {
             for (let j = 0; j < 8; j++) {
@@ -319,6 +340,7 @@
         return false;
     }
 
+    // Базовая проверка хода (без проверки шаха)
     function isValidMoveSimple(fromX, fromY, toX, toY, testBoard, movingColor) {
         if (!testBoard[fromX] || !testBoard[fromX][fromY]) return false;
         const piece = testBoard[fromX][fromY];
@@ -368,6 +390,7 @@
         }
     }
 
+    // Проверка хода с учётом шаха
     function isValidMoveWithCheck(fromX, fromY, toX, toY) {
         if (!board[fromX] || !board[fromX][fromY]) return false;
         const piece = board[fromX][fromY];
@@ -765,7 +788,10 @@
                 gameActive: false,
                 lastMove: null,
                 enPassantTarget: null,
-                castlingRights: { white: { king: true, queen: true }, black: { king: true, queen: true } },
+                castlingRights: { 
+                    white: { king: true, queen: true }, 
+                    black: { king: true, queen: true } 
+                },
                 moveNotations: []
             }
         };
