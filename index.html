@@ -159,7 +159,7 @@
 </div>
 
 <script>
-    // ---------- FIREBASE КОНФИГУРАЦИЯ (исправленный URL) ----------
+    // ---------- FIREBASE КОНФИГУРАЦИЯ ----------
     const firebaseConfig = {
         apiKey: "AIzaSyAnZNTKOI7NhS0ZURZiiF-KjuCGb3rjPlM",
         authDomain: "chess-trainer-7da9c.firebaseapp.com",
@@ -188,13 +188,13 @@
             database = firebase.database(app);
             auth = firebase.auth(app);
             auth.signInAnonymously().catch(e => console.log('Auth error:', e));
-            console.log('Firebase initialized with correct region');
+            console.log('Firebase initialized');
         }
     } catch(e) {
         console.log('Firebase init error:', e);
     }
     
-    // ---------- ШАХМАТНАЯ ЛОГИКА (исправленная) ----------
+    // ---------- ШАХМАТНАЯ ЛОГИКА ----------
     const piecesMap = {
         '♔': { type: 'king', color: 'white' }, '♕': { type: 'queen', color: 'white' },
         '♖': { type: 'rook', color: 'white' }, '♗': { type: 'bishop', color: 'white' },
@@ -229,7 +229,9 @@
     let castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
     let waitingForPromotion = false;
 
-    function copyBoard(src) { return src.map(row => row.map(cell => cell ? { ...cell } : null)); }
+    function copyBoard(src) {
+        return src.map(row => row.map(cell => cell ? { ...cell } : null));
+    }
     
     function boardToData() {
         const data = [];
@@ -244,8 +246,9 @@
     
     function dataToBoard(data) {
         const newBoard = Array(8).fill().map(() => Array(8).fill(null));
+        if (!data) return newBoard;
         for (const item of data) {
-            if (item.x >= 0 && item.x < 8 && item.y >= 0 && item.y < 8) {
+            if (item && item.x >= 0 && item.x < 8 && item.y >= 0 && item.y < 8) {
                 newBoard[item.x][item.y] = { type: item.type, color: item.color };
             }
         }
@@ -254,16 +257,19 @@
     
     function syncToFirebase() {
         if (!isOnlineMode || !currentRoomId || !database) return;
-        database.ref(`rooms/${currentRoomId}/gameState`).set({
+        
+        const gameState = {
             board: boardToData(),
             currentTurn: currentTurn,
             gameActive: gameActive,
-            lastMove: lastMove,
-            moveNotations: moveNotations,
+            lastMove: lastMove ? { from: lastMove.from, to: lastMove.to } : null,
+            moveNotations: moveNotations || [],
             enPassantTarget: enPassantTarget,
             castlingRights: castlingRights,
             timestamp: Date.now()
-        });
+        };
+        
+        database.ref(`rooms/${currentRoomId}/gameState`).set(gameState).catch(e => console.log('Sync error:', e));
     }
     
     function saveToHistory(notation) {
@@ -272,9 +278,11 @@
             moveNotations = moveNotations.slice(0, currentHistoryIndex);
         }
         moveHistory.push({
-            board: copyBoard(board), enPassantTarget: enPassantTarget,
-            castlingRights: JSON.parse(JSON.stringify(castlingRights)),
-            currentTurn: currentTurn, lastMove: lastMove
+            board: copyBoard(board),
+            enPassantTarget: enPassantTarget ? { x: enPassantTarget.x, y: enPassantTarget.y } : null,
+            castlingRights: { white: { ...castlingRights.white }, black: { ...castlingRights.black } },
+            currentTurn: currentTurn,
+            lastMove: lastMove ? { from: [...lastMove.from], to: [...lastMove.to] } : null
         });
         if (notation) moveNotations.push(notation);
         currentHistoryIndex = moveHistory.length - 1;
@@ -286,10 +294,10 @@
         if (index < 0 || index >= moveHistory.length) return false;
         const state = moveHistory[index];
         board = copyBoard(state.board);
-        enPassantTarget = state.enPassantTarget;
-        castlingRights = JSON.parse(JSON.stringify(state.castlingRights));
+        enPassantTarget = state.enPassantTarget ? { x: state.enPassantTarget.x, y: state.enPassantTarget.y } : null;
+        castlingRights = { white: { ...state.castlingRights.white }, black: { ...state.castlingRights.black } };
         currentTurn = state.currentTurn;
-        lastMove = state.lastMove;
+        lastMove = state.lastMove ? { from: [...state.lastMove.from], to: [...state.lastMove.to] } : null;
         currentHistoryIndex = index;
         selectedCell = null;
         possibleMoves = [];
@@ -299,11 +307,10 @@
         return true;
     }
 
-    // Проверка находится ли клетка под атакой
     function isSquareAttacked(x, y, color, testBoard) {
         for (let i = 0; i < 8; i++) {
             for (let j = 0; j < 8; j++) {
-                const p = testBoard[i][j];
+                const p = testBoard[i]?.[j];
                 if (p && p.color !== color) {
                     if (isValidMoveSimple(i, j, x, y, testBoard, p.color)) return true;
                 }
@@ -312,59 +319,33 @@
         return false;
     }
 
-    // Базовая проверка хода (без проверки шаха)
     function isValidMoveSimple(fromX, fromY, toX, toY, testBoard, movingColor) {
-        const piece = testBoard[fromX]?.[fromY];
+        if (!testBoard[fromX] || !testBoard[fromX][fromY]) return false;
+        const piece = testBoard[fromX][fromY];
         if (!piece || piece.color !== movingColor) return false;
         
-        const target = testBoard[toX]?.[toY];
+        if (!testBoard[toX]) return false;
+        const target = testBoard[toX][toY];
         if (target && target.color === piece.color) return false;
         
-        const dx = toX - fromX, dy = toY - fromY;
-        const absDx = Math.abs(dx), absDy = Math.abs(dy);
+        const dx = toX - fromX;
+        const dy = toY - fromY;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
         
         switch (piece.type) {
             case 'pawn':
                 const dir = piece.color === 'white' ? -1 : 1;
                 const startRow = piece.color === 'white' ? 6 : 1;
-                // Обычный ход вперёд
                 if (dx === dir && dy === 0 && !target) return true;
-                // Ход на две клетки
                 if (dx === 2 * dir && dy === 0 && !target && fromX === startRow && !testBoard[fromX + dir]?.[fromY]) return true;
-                // Взятие
                 if (dx === dir && Math.abs(dy) === 1 && target) return true;
-                // Взятие на проходе
                 if (dx === dir && Math.abs(dy) === 1 && !target && enPassantTarget && enPassantTarget.x === toX && enPassantTarget.y === toY) return true;
                 return false;
             case 'knight':
                 return (absDx === 2 && absDy === 1) || (absDx === 1 && absDy === 2);
             case 'king':
                 if (Math.max(absDx, absDy) === 1) return true;
-                // Рокировка
-                if (dx === 0 && Math.abs(dy) === 2 && gameActive) {
-                    const row = piece.color === 'white' ? 7 : 0;
-                    if (fromX !== row || fromY !== 4) return false;
-                    const isKingSide = dy === 2;
-                    const rookY = isKingSide ? 7 : 0;
-                    const rook = testBoard[row]?.[rookY];
-                    if (!rook || rook.type !== 'rook' || rook.color !== piece.color) return false;
-                    const betweenY = isKingSide ? [5, 6] : [1, 2, 3];
-                    for (let y of betweenY) {
-                        if (testBoard[row]?.[y]) return false;
-                    }
-                    const rights = piece.color === 'white' ? castlingRights.white : castlingRights.black;
-                    if (isKingSide && !rights.king) return false;
-                    if (!isKingSide && !rights.queen) return false;
-                    // Проверка, что король не проходит под шах
-                    for (let step = 0; step <= Math.abs(dy); step++) {
-                        const testY = fromY + (dy > 0 ? step : -step);
-                        const fakeBoard = copyBoard(testBoard);
-                        fakeBoard[row][fromY] = null;
-                        fakeBoard[row][testY] = { type: 'king', color: piece.color };
-                        if (isSquareAttacked(row, testY, piece.color, fakeBoard)) return false;
-                    }
-                    return true;
-                }
                 return false;
             case 'queen':
             case 'rook':
@@ -373,11 +354,13 @@
                 if (piece.type === 'bishop' && absDx !== absDy) return false;
                 let stepX = dx === 0 ? 0 : dx / Math.abs(dx);
                 let stepY = dy === 0 ? 0 : dy / Math.abs(dy);
-                let x = fromX + stepX, y = fromY + stepY;
+                let x = fromX + stepX;
+                let y = fromY + stepY;
                 while (x !== toX || y !== toY) {
                     if (x < 0 || x >= 8 || y < 0 || y >= 8) return false;
                     if (testBoard[x]?.[y]) return false;
-                    x += stepX; y += stepY;
+                    x += stepX;
+                    y += stepY;
                 }
                 return true;
             default:
@@ -385,9 +368,9 @@
         }
     }
 
-    // Проверка хода с учётом шаха
     function isValidMoveWithCheck(fromX, fromY, toX, toY) {
-        const piece = board[fromX]?.[fromY];
+        if (!board[fromX] || !board[fromX][fromY]) return false;
+        const piece = board[fromX][fromY];
         if (!piece) return false;
         if (gameActive && piece.color !== currentTurn) return false;
         if (!isValidMoveSimple(fromX, fromY, toX, toY, board, piece.color)) return false;
@@ -395,30 +378,8 @@
         const testBoard = copyBoard(board);
         const movingPiece = testBoard[fromX][fromY];
         
-        // Рокировка
-        if (movingPiece.type === 'king' && Math.abs(toY - fromY) === 2) {
-            const row = movingPiece.color === 'white' ? 7 : 0;
-            const isKingSide = toY > fromY;
-            const rookY = isKingSide ? 7 : 0;
-            const newRookY = isKingSide ? 5 : 3;
-            testBoard[toX][toY] = movingPiece;
-            testBoard[fromX][fromY] = null;
-            testBoard[row][newRookY] = testBoard[row][rookY];
-            testBoard[row][rookY] = null;
-            return !isSquareAttacked(toX, toY, movingPiece.color, testBoard);
-        }
-        
-        // Взятие на проходе
-        let isEnPassant = false;
-        if (movingPiece.type === 'pawn' && Math.abs(toY - fromY) === 1 && !testBoard[toX]?.[toY] && enPassantTarget && enPassantTarget.x === toX && enPassantTarget.y === toY) {
-            isEnPassant = true;
-            testBoard[toX][toY] = movingPiece;
-            testBoard[fromX][fromY] = null;
-            testBoard[fromX][toY] = null;
-        } else {
-            testBoard[toX][toY] = movingPiece;
-            testBoard[fromX][fromY] = null;
-        }
+        testBoard[toX][toY] = movingPiece;
+        testBoard[fromX][fromY] = null;
         
         return !isSquareAttacked(toX, toY, movingPiece.color, testBoard);
     }
@@ -436,24 +397,29 @@
     }
 
     function showPromotionDialog(callback) {
-        const overlay = document.createElement('div'); overlay.className = 'overlay';
-        const dialog = document.createElement('div'); dialog.className = 'promotion-dialog';
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        const dialog = document.createElement('div');
+        dialog.className = 'promotion-dialog';
         dialog.innerHTML = `<p>Выберите фигуру:</p>
             <button data-piece="queen">♕ Ферзь</button>
             <button data-piece="rook">♖ Ладья</button>
             <button data-piece="bishop">♗ Слон</button>
             <button data-piece="knight">♘ Конь</button>`;
-        document.body.appendChild(overlay); document.body.appendChild(dialog);
+        document.body.appendChild(overlay);
+        document.body.appendChild(dialog);
         dialog.querySelectorAll('button').forEach(btn => {
             btn.onclick = () => {
-                overlay.remove(); dialog.remove();
+                overlay.remove();
+                dialog.remove();
                 callback(btn.dataset.piece);
             };
         });
     }
 
     function tryMove(fromX, fromY, toX, toY) {
-        const piece = board[fromX]?.[fromY];
+        if (!board[fromX] || !board[fromX][fromY]) return false;
+        const piece = board[fromX][fromY];
         if (!piece) return false;
         if (gameActive && piece.color !== currentTurn) return false;
         if (!isValidMoveWithCheck(fromX, fromY, toX, toY)) return false;
@@ -469,7 +435,8 @@
             return isSquareAttacked(toX, toY, piece.color, testBoard);
         })();
         
-        const files = 'abcdefgh', ranks = '87654321';
+        const files = 'abcdefgh';
+        const ranks = '87654321';
         const pieceSymbols = { king: 'K', queen: 'Q', rook: 'R', bishop: 'B', knight: 'N', pawn: '' };
         let notation = pieceSymbols[piece.type];
         if (piece.type === 'pawn' && (isCapture || isEnPassant)) notation = files[fromY];
@@ -480,7 +447,6 @@
         
         if (gameActive) saveToHistory(notation);
         
-        // Обновление прав рокировки
         if (piece.type === 'king') {
             if (piece.color === 'white') castlingRights.white = { king: false, queen: false };
             else castlingRights.black = { king: false, queen: false };
@@ -497,7 +463,6 @@
             newEnPassantTarget = { x: (fromX + toX) / 2, y: fromY };
         }
         
-        // Выполнение хода
         if (isCastle) {
             const row = piece.color === 'white' ? 7 : 0;
             const isKingSide = toY > fromY;
@@ -520,7 +485,7 @@
         lastMove = { from: [fromX, fromY], to: [toX, toY] };
         
         const movedPiece = board[toX][toY];
-        if (movedPiece.type === 'pawn' && (toX === 0 || toX === 7)) {
+        if (movedPiece && movedPiece.type === 'pawn' && (toX === 0 || toX === 7)) {
             waitingForPromotion = true;
             showPromotionDialog((pieceType) => {
                 board[toX][toY] = { type: pieceType, color: movedPiece.color };
@@ -549,7 +514,9 @@
     function clearBoard() {
         if (gameActive) return;
         board = Array(8).fill().map(() => Array(8).fill(null));
-        selectedCell = null; possibleMoves = []; enPassantTarget = null;
+        selectedCell = null;
+        possibleMoves = [];
+        enPassantTarget = null;
         renderBoard();
         if (isOnlineMode && currentRoomId && database) syncToFirebase();
     }
@@ -561,12 +528,16 @@
             gameActive = false;
             document.getElementById('historyPanel').style.display = 'none';
         }
-        moveHistory = []; moveNotations = []; currentHistoryIndex = -1;
-        selectedCell = null; possibleMoves = [];
+        moveHistory = [];
+        moveNotations = [];
+        currentHistoryIndex = -1;
+        selectedCell = null;
+        possibleMoves = [];
         currentTurn = firstTurn;
         enPassantTarget = null;
         castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
-        renderBoard(); updateHistoryPanel();
+        renderBoard();
+        updateHistoryPanel();
         if (isOnlineMode && currentRoomId && database) syncToFirebase();
     }
 
@@ -576,7 +547,10 @@
         for (let i = 0; i < 8; i++) {
             for (let j = 0; j < 8; j++) {
                 const p = board[i][j];
-                if (p?.type === 'king') p.color === 'white' ? whiteKings++ : blackKings++;
+                if (p && p.type === 'king') {
+                    if (p.color === 'white') whiteKings++;
+                    else blackKings++;
+                }
             }
         }
         if (whiteKings !== 1) { alert('Должен быть 1 белый король!'); return; }
@@ -585,11 +559,14 @@
         initialBoardState = copyBoard(board);
         gameActive = true;
         currentTurn = firstTurn;
-        moveHistory = []; moveNotations = []; currentHistoryIndex = -1;
+        moveHistory = [];
+        moveNotations = [];
+        currentHistoryIndex = -1;
         enPassantTarget = null;
         castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
         document.getElementById('historyPanel').style.display = 'block';
-        renderBoard(); updateHistoryPanel();
+        renderBoard();
+        updateHistoryPanel();
         if (isOnlineMode && currentRoomId && database) syncToFirebase();
     }
 
@@ -641,14 +618,16 @@
             if (piece) {
                 board[toX][toY] = piece;
                 board[dragStartCell.x][dragStartCell.y] = null;
-                dragStartCell = null; possibleMoves = [];
+                dragStartCell = null;
+                possibleMoves = [];
                 renderBoard();
                 if (isOnlineMode && currentRoomId && database) syncToFirebase();
                 return true;
             }
         }
         tryMove(dragStartCell.x, dragStartCell.y, toX, toY);
-        dragStartCell = null; possibleMoves = [];
+        dragStartCell = null;
+        possibleMoves = [];
         renderBoard();
         return true;
     }
@@ -658,7 +637,8 @@
         if (!gameActive) {
             if (board[x]?.[y]) {
                 board[x][y] = null;
-                selectedCell = null; possibleMoves = [];
+                selectedCell = null;
+                possibleMoves = [];
                 renderBoard();
                 if (isOnlineMode && currentRoomId && database) syncToFirebase();
             }
@@ -671,13 +651,15 @@
                 possibleMoves = getAllValidMovesForPiece(x, y);
                 renderBoard();
             } else {
-                selectedCell = null; possibleMoves = [];
+                selectedCell = null;
+                possibleMoves = [];
                 renderBoard();
             }
         } else {
             const [fromX, fromY] = selectedCell;
             tryMove(fromX, fromY, x, y);
-            selectedCell = null; possibleMoves = [];
+            selectedCell = null;
+            possibleMoves = [];
             renderBoard();
         }
     }
@@ -692,13 +674,16 @@
                 const isLight = (i + j) % 2 === 0;
                 const cell = document.createElement('div');
                 cell.className = `cell ${isLight ? 'light' : 'dark'}`;
-                cell.setAttribute('data-x', i); cell.setAttribute('data-y', j);
+                cell.setAttribute('data-x', i);
+                cell.setAttribute('data-y', j);
                 if (selectedCell && selectedCell[0] === i && selectedCell[1] === j) cell.classList.add('selected');
                 if (possibleMoves.some(m => m.x === i && m.y === j)) {
                     const move = possibleMoves.find(m => m.x === i && m.y === j);
                     cell.classList.add(move.isCapture ? 'highlight-capture' : 'highlight-move');
                 }
-                if (lastMove && ((lastMove.from[0] === i && lastMove.from[1] === j) || (lastMove.to[0] === i && lastMove.to[1] === j))) cell.classList.add('last-move');
+                if (lastMove && ((lastMove.from[0] === i && lastMove.from[1] === j) || (lastMove.to[0] === i && lastMove.to[1] === j))) {
+                    cell.classList.add('last-move');
+                }
                 cell.innerText = symbol;
                 cell.draggable = piece !== null;
                 cell.ondragstart = (e) => onDragStart(e, i, j);
@@ -910,9 +895,11 @@
     // ---------- ИНИЦИАЛИЗАЦИЯ ----------
     function init() {
         buildPalette();
-        // Начальная позиция
+        // Начальная позиция с двумя королями и пешками
         board[7][4] = { type: 'king', color: 'white' };
         board[0][4] = { type: 'king', color: 'black' };
+        board[6][4] = { type: 'pawn', color: 'white' };
+        board[1][4] = { type: 'pawn', color: 'black' };
         renderBoard();
         initialBoardState = copyBoard(board);
         
