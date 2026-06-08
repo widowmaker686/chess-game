@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Шахматная песочница — Онлайн-уроки с тренером</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <style>
+        * { user-select: none; -webkit-tap-highlight-color: transparent; }
+        body {
+            background: linear-gradient(135deg, #2c3e2f 0%, #1a4d2a 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        .game-container {
+            background: #2b1b0e;
+            padding: 20px;
+            border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            position: relative;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            background: #deb887;
+            border: 3px solid #654321;
+            border-radius: 8px;
+            overflow: hidden;
+            width: min(70vw, 70vh, 600px);
+            height: min(70vw, 70vh, 600px);
+        }
+        .cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: min(6vw, 6vh, 48px);
+            cursor: pointer;
+            transition: 0.05s linear;
+            aspect-ratio: 1 / 1;
+        }
+        .cell.light { background: #f0d9b5; }
+        .cell.dark { background: #b58863; }
+        .cell.selected { background: #4c9f70 !important; box-shadow: inset 0 0 0 3px gold; }
+        .cell.highlight-move { background: #7cb518 !important; }
+        .cell.highlight-capture { background: #e25822 !important; }
+        .cell.last-move { background: #b7d968 !important; }
+        .cell.check { background: #ff4444 !important; animation: pulse 0.5s; }
+        @keyframes pulse { 0%,100% { background: #ff4444; } 50% { background: #ff0000; } }
+        .controls { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+        button {
+            background: #4a3620; border: none; color: #ffefcf; padding: 10px 20px;
+            font-size: 16px; font-weight: bold; border-radius: 40px; cursor: pointer;
+            transition: 0.1s; font-family: monospace;
+        }
+        button:active { transform: scale(0.96); background: #2d1f10; }
+        .online-panel {
+            background: #1f2a1b; padding: 8px 16px; border-radius: 60px;
+            display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap;
+        }
+        .online-status { background: #2a4a2a; padding: 4px 8px; border-radius: 20px; font-size: 11px; }
+        .online-status.connected { background: #2a6a2a; }
+        .online-status.waiting { background: #6a4a2a; }
+        .first-move-selector {
+            background: #2a4a2a; padding: 5px 12px; border-radius: 40px;
+            display: inline-flex; gap: 10px; align-items: center;
+        }
+        .first-move-selector span { font-size: 12px; color: #ffdd99; }
+        .first-move-btn { padding: 4px 12px; font-size: 12px; background: #3e2a1a; }
+        .first-move-btn.active-first { background: #c99e6f; color: #1e2a0e; }
+        .status { background: #1f1a0e; color: #ffdd99; padding: 8px 16px; border-radius: 32px; font-size: 14px; text-align: center; }
+        .piece-palette { display: flex; gap: 5px; background: #3e2a1a; padding: 8px; border-radius: 60px; flex-wrap: wrap; }
+        .piece-icon { font-size: 28px; background: #5e3a1e; padding: 4px 10px; border-radius: 30px; cursor: grab; }
+        .piece-icon:active { background: #b87c3a; }
+        .history-panel { background: #1f1a0e; border-radius: 16px; padding: 10px; margin-top: 15px; max-height: 150px; overflow-y: auto; }
+        .history-title { color: #ffdd99; font-size: 12px; margin-bottom: 8px; text-align: center; }
+        .history-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+        .history-item { background: #3e2a1a; color: #ffefcf; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-family: monospace; cursor: pointer; }
+        .history-item.current { background: #c99e6f; color: #1e2a0e; }
+        .promotion-dialog {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: #2b1b0e; padding: 20px; border-radius: 16px; border: 2px solid #c99e6f;
+            z-index: 2000; text-align: center;
+        }
+        .promotion-dialog button { margin: 0 5px; padding: 8px 15px; font-size: 20px; }
+        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1999; }
+        .room-code { font-size: 20px; font-weight: bold; background: #1f1a0e; padding: 4px 12px; border-radius: 40px; letter-spacing: 2px; }
+        .player-role { background: #2a4a2a; padding: 5px 10px; border-radius: 20px; font-size: 12px; text-align: center; margin-top: 8px; display: inline-block; }
+        @media (max-width: 600px) {
+            .piece-icon { font-size: 20px; padding: 2px 8px; }
+            button { padding: 6px 12px; font-size: 12px; }
+            .first-move-btn { padding: 2px 8px; font-size: 10px; }
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div class="game-container">
+        <div class="board" id="board"></div>
+        
+        <div class="controls">
+            <button id="onlineModeBtn" style="background:#2a6a2a">🌐 Онлайн-режим</button>
+            <button id="localModeBtn" style="background:#4a3620">🏠 Локальный режим</button>
+            
+            <div id="onlinePanel" style="display: none;" class="online-panel">
+                <button id="createRoomBtn">➕ Создать комнату</button>
+                <input type="text" id="roomCodeInput" placeholder="Код комнаты" maxlength="6">
+                <button id="joinRoomBtn">🔗 Присоединиться</button>
+                <span id="onlineStatus" class="online-status waiting">⚪ Не в сети</span>
+            </div>
+            
+            <div id="roomInfo" style="display: none;" class="online-panel">
+                <span>🏠 Код: </span>
+                <span id="roomCodeDisplay" class="room-code"></span>
+                <button id="copyRoomCodeBtn">📋 Копировать</button>
+                <button id="leaveRoomBtn">🚪 Выйти</button>
+            </div>
+            
+            <div class="first-move-selector">
+                <span>🎯 Первый ход:</span>
+                <button id="firstMoveWhite" class="first-move-btn active-first">⚪ Белые</button>
+                <button id="firstMoveBlack" class="first-move-btn">⚫ Чёрные</button>
+            </div>
+            
+            <button id="startGameBtn">▶ СТАРТ ИГРЫ</button>
+            <button id="undoBtn">↩ Отмена хода</button>
+            <button id="resetBtn">🔄 Сброс к старту</button>
+            <button id="clearBoardBtn">🗑 Очистить доску</button>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-top: 12px; gap: 8px; flex-wrap: wrap;">
+            <div class="status" id="gameStatus">⚙️ РЕЖИМ РАССТАНОВКИ</div>
+            <div class="piece-palette" id="piecePalette"></div>
+        </div>
+        
+        <div style="text-align: center;">
+            <div id="playerRoleDisplay" class="player-role" style="display: none;"></div>
+        </div>
+
+        <div class="history-panel" id="historyPanel" style="display: none;">
+            <div class="history-title">📜 ИСТОРИЯ ХОДОВ</div>
+            <div class="history-list" id="historyList"></div>
+        </div>
+    </div>
+    
+    <p style="color: #d4c2a5; font-size: 12px; text-align: center; margin-top: 12px;">
+        🌐 <strong>ОНЛАЙН-РЕЖИМ:</strong> Создайте комнату → отправьте код ученику → нажмите СТАРТ!<br>
+        🏠 <strong>ЛОКАЛЬНЫЙ РЕЖИМ:</strong> Играйте вдвоём за одним устройством.
+    </p>
+</div>
+
+<script>
+    // ---------- FIREBASE КОНФИГУРАЦИЯ (ваш проект) ----------
+    const firebaseConfig = {
+        apiKey: "AIzaSyAnZNTKOI7NhS0ZURZiiF-KjuCGb3rjPlM",
+        authDomain: "chess-trainer-7da9c.firebaseapp.com",
+        projectId: "chess-trainer-7da9c",
+        storageBucket: "chess-trainer-7da9c.firebasestorage.app",
+        messagingSenderId: "404515659257",
+        appId: "1:404515659257:web:b433560e400c1e6900f128",
+        measurementId: "G-EQD6ZBRXM8"
+    };
+    
+    // ---------- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ----------
+    let database = null;
+    let auth = null;
+    let currentRoomId = null;
+    let myPlayerId = null;
+    let myRole = null;
+    let isOnlineMode = false;
+    let isLocalMove = false;
+    let firebaseListener = null;
+    
+    // Инициализация Firebase
+    try {
+        if (typeof firebase !== 'undefined') {
+            const app = firebase.initializeApp(firebaseConfig);
+            database = firebase.database(app);
+            auth = firebase.auth(app);
+            auth.signInAnonymously().catch(e => console.log('Auth error:', e));
+            console.log('Firebase initialized');
+        }
+    } catch(e) {
+        console.log('Firebase init error:', e);
+    }
+    
+    // ---------- ШАХМАТНАЯ ЛОГИКА ----------
+    const piecesMap = {
+        '♔': { type: 'king', color: 'white' }, '♕': { type: 'queen', color: 'white' },
+        '♖': { type: 'rook', color: 'white' }, '♗': { type: 'bishop', color: 'white' },
+        '♘': { type: 'knight', color: 'white' }, '♙': { type: 'pawn', color: 'white' },
+        '♚': { type: 'king', color: 'black' }, '♛': { type: 'queen', color: 'black' },
+        '♜': { type: 'rook', color: 'black' }, '♝': { type: 'bishop', color: 'black' },
+        '♞': { type: 'knight', color: 'black' }, '♟': { type: 'pawn', color: 'black' }
+    };
+    
+    const symbolFromPiece = (type, color) => {
+        if (type === 'king') return color === 'white' ? '♔' : '♚';
+        if (type === 'queen') return color === 'white' ? '♕' : '♛';
+        if (type === 'rook') return color === 'white' ? '♖' : '♜';
+        if (type === 'bishop') return color === 'white' ? '♗' : '♝';
+        if (type === 'knight') return color === 'white' ? '♘' : '♞';
+        if (type === 'pawn') return color === 'white' ? '♙' : '♟';
+        return '';
+    };
+
+    let board = Array(8).fill().map(() => Array(8).fill(null));
+    let gameActive = false;
+    let currentTurn = 'white';
+    let firstTurn = 'white';
+    let moveHistory = [];
+    let moveNotations = [];
+    let currentHistoryIndex = -1;
+    let initialBoardState = null;
+    let selectedCell = null;
+    let lastMove = null;
+    let possibleMoves = [];
+    let enPassantTarget = null;
+    let castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
+    let waitingForPromotion = false;
+
+    function copyBoard(src) { return src.map(row => row.map(cell => cell ? { ...cell } : null)); }
+    
+    function boardToData() {
+        const data = [];
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const p = board[i][j];
+                if (p) data.push({ x: i, y: j, type: p.type, color: p.color });
+            }
+        }
+        return data;
+    }
+    
+    function dataToBoard(data) {
+        const newBoard = Array(8).fill().map(() => Array(8).fill(null));
+        for (const item of data) newBoard[item.x][item.y] = { type: item.type, color: item.color };
+        return newBoard;
+    }
+    
+    function syncToFirebase() {
+        if (!isOnlineMode || !currentRoomId || !database) return;
+        database.ref(`rooms/${currentRoomId}/gameState`).set({
+            board: boardToData(),
+            currentTurn: currentTurn,
+            gameActive: gameActive,
+            lastMove: lastMove,
+            moveNotations: moveNotations,
+            enPassantTarget: enPassantTarget,
+            castlingRights: castlingRights,
+            timestamp: Date.now()
+        });
+    }
+    
+    function saveToHistory(notation) {
+        if (currentHistoryIndex < moveHistory.length - 1) {
+            moveHistory = moveHistory.slice(0, currentHistoryIndex + 1);
+            moveNotations = moveNotations.slice(0, currentHistoryIndex);
+        }
+        moveHistory.push({
+            board: copyBoard(board), enPassantTarget: enPassantTarget,
+            castlingRights: JSON.parse(JSON.stringify(castlingRights)),
+            currentTurn: currentTurn, lastMove: lastMove
+        });
+        if (notation) moveNotations.push(notation);
+        currentHistoryIndex = moveHistory.length - 1;
+        updateHistoryPanel();
+        if (isOnlineMode && currentRoomId && database) syncToFirebase();
+    }
+
+    function restoreFromHistory(index) {
+        if (index < 0 || index >= moveHistory.length) return false;
+        const state = moveHistory[index];
+        board = copyBoard(state.board);
+        enPassantTarget = state.enPassantTarget;
+        castlingRights = JSON.parse(JSON.stringify(state.castlingRights));
+        currentTurn = state.currentTurn;
+        lastMove = state.lastMove;
+        currentHistoryIndex = index;
+        selectedCell = null;
+        possibleMoves = [];
+        renderBoard();
+        updateHistoryPanel();
+        if (isOnlineMode && currentRoomId && database) syncToFirebase();
+        return true;
+    }
+
+    function isSquareAttacked(x, y, color, testBoard) {
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const p = testBoard[i][j];
+                if (p && p.color !== color && isValidMoveSimple(i, j, x, y, testBoard, p.color)) return true;
+            }
+        }
+        return false;
+    }
+
+    function isValidMoveSimple(fromX, fromY, toX, toY, testBoard, movingColor) {
+        const piece = testBoard[fromX][fromY];
+        if (!piece || piece.color !== movingColor) return false;
+        const target = testBoard[toX][toY];
+        if (target && target.color === piece.color) return false;
+        const dx = toX - fromX, dy = toY - fromY;
+        const absDx = Math.abs(dx), absDy = Math.abs(dy);
+        
+        switch (piece.type) {
+            case 'pawn':
+                const dir = piece.color === 'white' ? -1 : 1;
+                const startRow = piece.color === 'white' ? 6 : 1;
+                if (dx === dir && dy === 0 && !target) return true;
+                if (dx === 2*dir && dy === 0 && !target && fromX === startRow && !testBoard[fromX+dir][fromY]) return true;
+                if (dx === dir && Math.abs(dy) === 1 && target) return true;
+                if (dx === dir && Math.abs(dy) === 1 && !target && enPassantTarget && enPassantTarget.x === toX && enPassantTarget.y === toY) return true;
+                return false;
+            case 'knight': return (absDx === 2 && absDy === 1) || (absDx === 1 && absDy === 2);
+            case 'king':
+                if (Math.max(absDx, absDy) === 1) return true;
+                if (dx === 0 && Math.abs(dy) === 2 && gameActive) {
+                    const row = piece.color === 'white' ? 7 : 0;
+                    if (fromX !== row || fromY !== 4) return false;
+                    const isKingSide = dy === 2;
+                    const rookY = isKingSide ? 7 : 0;
+                    const rook = testBoard[row][rookY];
+                    if (!rook || rook.type !== 'rook' || rook.color !== piece.color) return false;
+                    const betweenY = isKingSide ? [5,6] : [1,2,3];
+                    for (let y of betweenY) if (testBoard[row][y]) return false;
+                    const rights = piece.color === 'white' ? castlingRights.white : castlingRights.black;
+                    if (isKingSide && !rights.king) return false;
+                    if (!isKingSide && !rights.queen) return false;
+                    for (let step = 0; step <= Math.abs(dy); step++) {
+                        const testY = fromY + (dy > 0 ? step : -step);
+                        const fakeBoard = copyBoard(testBoard);
+                        fakeBoard[row][fromY] = null;
+                        fakeBoard[row][testY] = { type: 'king', color: piece.color };
+                        if (isSquareAttacked(row, testY, piece.color, fakeBoard)) return false;
+                    }
+                    return true;
+                }
+                return false;
+            case 'queen': case 'rook': case 'bishop':
+                if (piece.type === 'rook' && dx !== 0 && dy !== 0) return false;
+                if (piece.type === 'bishop' && absDx !== absDy) return false;
+                let stepX = dx === 0 ? 0 : dx / absDx;
+                let stepY = dy === 0 ? 0 : dy / absDy;
+                let x = fromX + stepX, y = fromY + stepY;
+                while (x !== toX || y !== toY) {
+                    if (testBoard[x][y]) return false;
+                    x += stepX; y += stepY;
+                }
+                return true;
+            default: return false;
+        }
+    }
+
+    function isValidMoveWithCheck(fromX, fromY, toX, toY) {
+        const piece = board[fromX][fromY];
+        if (!piece) return false;
+        if (gameActive && piece.color !== currentTurn) return false;
+        if (!isValidMoveSimple(fromX, fromY, toX, toY, board, piece.color)) return false;
+        const testBoard = copyBoard(board);
+        const movingPiece = testBoard[fromX][fromY];
+        if (movingPiece.type === 'king' && Math.abs(toY - fromY) === 2) {
+            const row = movingPiece.color === 'white' ? 7 : 0;
+            const isKingSide = toY > fromY;
+            const rookY = isKingSide ? 7 : 0;
+            const newRookY = isKingSide ? 5 : 3;
+            testBoard[toX][toY] = movingPiece;
+            testBoard[fromX][fromY] = null;
+            testBoard[row][newRookY] = testBoard[row][rookY];
+            testBoard[row][rookY] = null;
+            return !isSquareAttacked(toX, toY, movingPiece.color, testBoard);
+        }
+        let isEnPassant = false;
+        if (movingPiece.type === 'pawn' && Math.abs(toY - fromY) === 1 && !testBoard[toX][toY] && enPassantTarget && enPassantTarget.x === toX && enPassantTarget.y === toY) {
+            isEnPassant = true;
+            testBoard[toX][toY] = movingPiece;
+            testBoard[fromX][fromY] = null;
+            testBoard[fromX][toY] = null;
+        } else {
+            testBoard[toX][toY] = movingPiece;
+            testBoard[fromX][fromY] = null;
+        }
+        return !isSquareAttacked(toX, toY, movingPiece.color, testBoard);
+    }
+
+    function getAllValidMovesForPiece(x, y) {
+        const moves = [];
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                if (isValidMoveWithCheck(x, y, i, j)) {
+                    moves.push({ x: i, y: j, isCapture: board[i][j] !== null });
+                }
+            }
+        }
+        return moves;
+    }
+
+    function showPromotionDialog(callback) {
+        const overlay = document.createElement('div'); overlay.className = 'overlay';
+        const dialog = document.createElement('div'); dialog.className = 'promotion-dialog';
+        dialog.innerHTML = `<p>Выберите фигуру:</p>
+            <button data-piece="queen">♕</button><button data-piece="rook">♖</button>
+            <button data-piece="bishop">♗</button><button data-piece="knight">♘</button>`;
+        document.body.appendChild(overlay); document.body.appendChild(dialog);
+        dialog.querySelectorAll('button').forEach(btn => {
+            btn.onclick = () => {
+                overlay.remove(); dialog.remove();
+                callback(btn.dataset.piece);
+            };
+        });
+    }
+
+    function tryMove(fromX, fromY, toX, toY) {
+        const piece = board[fromX][fromY];
+        if (!piece) return false;
+        if (gameActive && piece.color !== currentTurn) return false;
+        if (!isValidMoveWithCheck(fromX, fromY, toX, toY)) return false;
+        
+        const isCapture = board[toX][toY] !== null;
+        const isCastle = (piece.type === 'king' && Math.abs(toY - fromY) === 2);
+        const isEnPassant = (piece.type === 'pawn' && Math.abs(toY - fromY) === 1 && !board[toX][toY] && enPassantTarget && enPassantTarget.x === toX && enPassantTarget.y === toY);
+        
+        const willBeCheck = (() => {
+            const testBoard = copyBoard(board);
+            testBoard[toX][toY] = piece;
+            testBoard[fromX][fromY] = null;
+            return isSquareAttacked(toX, toY, piece.color, testBoard);
+        })();
+        
+        const files = 'abcdefgh', ranks = '87654321';
+        const pieceSymbols = { king: 'K', queen: 'Q', rook: 'R', bishop: 'B', knight: 'N', pawn: '' };
+        let notation = pieceSymbols[piece.type];
+        if (piece.type === 'pawn' && (isCapture || isEnPassant)) notation = files[fromY];
+        if (isCapture || isEnPassant) notation += 'x';
+        notation += files[toY] + ranks[toX];
+        if (willBeCheck) notation += '+';
+        if (isCastle) notation = toY === 6 ? '0-0' : '0-0-0';
+        
+        if (gameActive) saveToHistory(notation);
+        
+        if (piece.type === 'king') {
+            if (piece.color === 'white') castlingRights.white = { king: false, queen: false };
+            else castlingRights.black = { king: false, queen: false };
+        }
+        if (piece.type === 'rook') {
+            if (fromX === 7 && fromY === 0) castlingRights.white.queen = false;
+            if (fromX === 7 && fromY === 7) castlingRights.white.king = false;
+            if (fromX === 0 && fromY === 0) castlingRights.black.queen = false;
+            if (fromX === 0 && fromY === 7) castlingRights.black.king = false;
+        }
+        
+        let newEnPassantTarget = null;
+        if (piece.type === 'pawn' && Math.abs(toX - fromX) === 2) newEnPassantTarget = { x: (fromX + toX) / 2, y: fromY };
+        
+        if (isCastle) {
+            const row = piece.color === 'white' ? 7 : 0;
+            const isKingSide = toY > fromY;
+            const rookY = isKingSide ? 7 : 0;
+            const newRookY = isKingSide ? 5 : 3;
+            board[toX][toY] = piece;
+            board[fromX][fromY] = null;
+            board[row][newRookY] = board[row][rookY];
+            board[row][rookY] = null;
+        } else if (isEnPassant) {
+            board[toX][toY] = piece;
+            board[fromX][fromY] = null;
+            board[fromX][toY] = null;
+        } else {
+            board[toX][toY] = piece;
+            board[fromX][fromY] = null;
+        }
+        
+        enPassantTarget = newEnPassantTarget;
+        lastMove = { from: [fromX, fromY], to: [toX, toY] };
+        
+        const movedPiece = board[toX][toY];
+        if (movedPiece.type === 'pawn' && (toX === 0 || toX === 7)) {
+            waitingForPromotion = true;
+            showPromotionDialog((pieceType) => {
+                board[toX][toY] = { type: pieceType, color: movedPiece.color };
+                waitingForPromotion = false;
+                if (gameActive) currentTurn = currentTurn === 'white' ? 'black' : 'white';
+                renderBoard();
+                if (isOnlineMode && currentRoomId && database) syncToFirebase();
+            });
+        } else {
+            if (gameActive) currentTurn = currentTurn === 'white' ? 'black' : 'white';
+        }
+        
+        renderBoard();
+        if (isOnlineMode && currentRoomId && database) syncToFirebase();
+        return true;
+    }
+
+    function setPieceAt(x, y, pieceSymbol) {
+        if (gameActive) return;
+        const pieceDef = piecesMap[pieceSymbol];
+        if (pieceDef) board[x][y] = { type: pieceDef.type, color: pieceDef.color };
+        renderBoard();
+        if (isOnlineMode && currentRoomId && database) syncToFirebase();
+    }
+
+    function clearBoard() {
+        if (gameActive) return;
+        board = Array(8).fill().map(() => Array(8).fill(null));
+        selectedCell = null; possibleMoves = []; enPassantTarget = null;
+        renderBoard();
+        if (isOnlineMode && currentRoomId && database) syncToFirebase();
+    }
+
+    function resetToInitial() {
+        if (initialBoardState) board = copyBoard(initialBoardState);
+        else clearBoard();
+        if (gameActive) {
+            gameActive = false;
+            document.getElementById('historyPanel').style.display = 'none';
+        }
+        moveHistory = []; moveNotations = []; currentHistoryIndex = -1;
+        selectedCell = null; possibleMoves = [];
+        currentTurn = firstTurn;
+        enPassantTarget = null;
+        castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
+        renderBoard(); updateHistoryPanel();
+        if (isOnlineMode && currentRoomId && database) syncToFirebase();
+    }
+
+    function startGame() {
+        if (gameActive) return;
+        let whiteKings = 0, blackKings = 0;
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const p = board[i][j];
+                if (p?.type === 'king') p.color === 'white' ? whiteKings++ : blackKings++;
+            }
+        }
+        if (whiteKings !== 1) { alert('Должен быть 1 белый король!'); return; }
+        if (blackKings !== 1) { alert('Должен быть 1 чёрный король!'); return; }
+        
+        initialBoardState = copyBoard(board);
+        gameActive = true;
+        currentTurn = firstTurn;
+        moveHistory = []; moveNotations = []; currentHistoryIndex = -1;
+        enPassantTarget = null;
+        castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
+        document.getElementById('historyPanel').style.display = 'block';
+        renderBoard(); updateHistoryPanel();
+        if (isOnlineMode && currentRoomId && database) syncToFirebase();
+    }
+
+    function undoMove() {
+        if (!gameActive) return;
+        if (currentHistoryIndex >= 0) restoreFromHistory(currentHistoryIndex);
+        else if (moveHistory.length > 0) restoreFromHistory(moveHistory.length - 1);
+    }
+
+    function updateHistoryPanel() {
+        const historyList = document.getElementById('historyList');
+        historyList.innerHTML = '';
+        for (let i = 0; i < moveNotations.length; i++) {
+            const moveNum = Math.floor(i / 2) + 1;
+            const text = i % 2 === 0 ? `${moveNum}. ${moveNotations[i]}` : moveNotations[i];
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            if (i === currentHistoryIndex) item.classList.add('current');
+            item.innerText = text;
+            item.onclick = () => { if (gameActive) restoreFromHistory(i); };
+            historyList.appendChild(item);
+        }
+    }
+
+    // ---------- UI ----------
+    let dragStartCell = null;
+    
+    function onDragStart(e, x, y) {
+        const piece = board[x][y];
+        if (!piece) { e.preventDefault(); return false; }
+        if (gameActive && piece.color !== currentTurn) { e.preventDefault(); return false; }
+        dragStartCell = { x, y };
+        e.dataTransfer.setData('text/plain', `${x},${y}`);
+        e.dataTransfer.setDragImage(new Image(), 0, 0);
+        possibleMoves = getAllValidMovesForPiece(x, y);
+        renderBoard();
+        return true;
+    }
+    
+    function onDrop(e, toX, toY) {
+        e.preventDefault();
+        if (!dragStartCell) return false;
+        if (!gameActive) {
+            const piece = board[dragStartCell.x][dragStartCell.y];
+            if (piece) {
+                board[toX][toY] = piece;
+                board[dragStartCell.x][dragStartCell.y] = null;
+                dragStartCell = null; possibleMoves = [];
+                renderBoard();
+                if (isOnlineMode && currentRoomId && database) syncToFirebase();
+                return true;
+            }
+        }
+        tryMove(dragStartCell.x, dragStartCell.y, toX, toY);
+        dragStartCell = null; possibleMoves = [];
+        renderBoard();
+        return true;
+    }
+    
+    function handleCellClick(x, y) {
+        if (waitingForPromotion) return;
+        if (!gameActive) {
+            if (board[x][y]) {
+                board[x][y] = null;
+                selectedCell = null; possibleMoves = [];
+                renderBoard();
+                if (isOnlineMode && currentRoomId && database) syncToFirebase();
+            }
+            return;
+        }
+        if (selectedCell === null) {
+            const piece = board[x][y];
+            if (piece && piece.color === currentTurn) {
+                selectedCell = [x, y];
+                possibleMoves = getAllValidMovesForPiece(x, y);
+                renderBoard();
+            } else {
+                selectedCell = null; possibleMoves = [];
+                renderBoard();
+            }
+        } else {
+            const [fromX, fromY] = selectedCell;
+            tryMove(fromX, fromY, x, y);
+            selectedCell = null; possibleMoves = [];
+            renderBoard();
+        }
+    }
+    
+    function renderBoard() {
+        const boardDiv = document.getElementById('board');
+        boardDiv.innerHTML = '';
+        for (let i = 0; i < 8; i++) {
+            for (let j = 0; j < 8; j++) {
+                const piece = board[i][j];
+                const symbol = piece ? symbolFromPiece(piece.type, piece.color) : '';
+                const isLight = (i + j) % 2 === 0;
+                const cell = document.createElement('div');
+                cell.className = `cell ${isLight ? 'light' : 'dark'}`;
+                cell.setAttribute('data-x', i); cell.setAttribute('data-y', j);
+                if (selectedCell && selectedCell[0] === i && selectedCell[1] === j) cell.classList.add('selected');
+                if (possibleMoves.some(m => m.x === i && m.y === j)) {
+                    const move = possibleMoves.find(m => m.x === i && m.y === j);
+                    cell.classList.add(move.isCapture ? 'highlight-capture' : 'highlight-move');
+                }
+                if (lastMove && ((lastMove.from[0] === i && lastMove.from[1] === j) || (lastMove.to[0] === i && lastMove.to[1] === j))) cell.classList.add('last-move');
+                cell.innerText = symbol;
+                cell.draggable = piece !== null;
+                cell.ondragstart = (e) => onDragStart(e, i, j);
+                cell.ondragover = (e) => e.preventDefault();
+                cell.ondrop = (e) => onDrop(e, i, j);
+                cell.onclick = () => handleCellClick(i, j);
+                boardDiv.appendChild(cell);
+            }
+        }
+    }
+    
+    function buildPalette() {
+        const palette = ['♔','♕','♖','♗','♘','♙','♚','♛','♜','♝','♞','♟'];
+        const container = document.getElementById('piecePalette');
+        container.innerHTML = '';
+        palette.forEach(sym => {
+            const btn = document.createElement('div');
+            btn.className = 'piece-icon';
+            btn.innerText = sym;
+            btn.draggable = true;
+            btn.ondragstart = (e) => {
+                if (gameActive) { e.preventDefault(); return false; }
+                e.dataTransfer.setData('text/plain', sym);
+                e.dataTransfer.setDragImage(new Image(), 0, 0);
+            };
+            btn.onclick = () => {
+                if (gameActive) return;
+                window.pendingPlacement = sym;
+                alert(`Нажми на клетку, чтобы поставить ${sym}`);
+            };
+            container.appendChild(btn);
+        });
+    }
+    
+    // ---------- ОНЛАЙН ФУНКЦИИ (Firebase) ----------
+    function generateRoomCode() {
+        return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+    
+    function listenToFirebase() {
+        if (firebaseListener) firebaseListener();
+        if (!database || !currentRoomId) return;
+        firebaseListener = database.ref(`rooms/${currentRoomId}/gameState`).on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data && !isLocalMove) {
+                board = dataToBoard(data.board);
+                currentTurn = data.currentTurn;
+                gameActive = data.gameActive;
+                lastMove = data.lastMove;
+                moveNotations = data.moveNotations || [];
+                enPassantTarget = data.enPassantTarget;
+                castlingRights = data.castlingRights || { white: { king: true, queen: true }, black: { king: true, queen: true } };
+                selectedCell = null;
+                possibleMoves = [];
+                renderBoard();
+                updateHistoryPanel();
+                updateGameStatus();
+            }
+            isLocalMove = false;
+        });
+    }
+    
+    async function createRoom() {
+        if (!database) { alert('Firebase не подключен! Проверьте интернет.'); return; }
+        
+        const roomCode = generateRoomCode();
+        currentRoomId = roomCode;
+        myPlayerId = auth?.currentUser?.uid || 'player_' + Date.now();
+        myRole = 'white';
+        isOnlineMode = true;
+        
+        const roomData = {
+            whitePlayer: myPlayerId,
+            blackPlayer: null,
+            createdAt: Date.now(),
+            gameState: {
+                board: boardToData(),
+                currentTurn: firstTurn,
+                gameActive: false,
+                lastMove: null,
+                enPassantTarget: null,
+                castlingRights: { white: { king: true, queen: true }, black: { king: true, queen: true } },
+                moveNotations: []
+            }
+        };
+        
+        await database.ref(`rooms/${roomCode}`).set(roomData);
+        document.getElementById('roomCodeDisplay').innerText = roomCode;
+        document.getElementById('roomInfo').style.display = 'inline-flex';
+        document.getElementById('onlineStatus').className = 'online-status waiting';
+        document.getElementById('onlineStatus').innerHTML = '⏳ Ожидание игрока...';
+        document.getElementById('playerRoleDisplay').style.display = 'block';
+        document.getElementById('playerRoleDisplay').innerHTML = '🎮 Ваша роль: БЕЛЫЕ (создатель)';
+        
+        listenToFirebase();
+        alert(`✅ Комната создана! Код: ${roomCode}\nОтправьте этот код ученику.`);
+        
+        database.ref(`rooms/${roomCode}/blackPlayer`).on('value', (snapshot) => {
+            if (snapshot.val()) {
+                document.getElementById('onlineStatus').className = 'online-status connected';
+                document.getElementById('onlineStatus').innerHTML = '✅ Противник подключён!';
+                alert('✅ Противник подключился! Можете начинать игру.');
+            }
+        });
+    }
+    
+    async function joinRoom() {
+        const roomCode = document.getElementById('roomCodeInput').value.toUpperCase().trim();
+        if (!roomCode) { alert('Введите код комнаты!'); return; }
+        if (!database) { alert('Firebase не подключен!'); return; }
+        
+        const roomRef = database.ref(`rooms/${roomCode}`);
+        const snapshot = await roomRef.get();
+        
+        if (!snapshot.exists()) { alert('❌ Комната не найдена!'); return; }
+        if (snapshot.val().blackPlayer) { alert('❌ Комната уже заполнена!'); return; }
+        
+        currentRoomId = roomCode;
+        myPlayerId = auth?.currentUser?.uid || 'player_' + Date.now();
+        myRole = 'black';
+        isOnlineMode = true;
+        
+        await roomRef.update({ blackPlayer: myPlayerId });
+        
+        const roomData = snapshot.val();
+        if (roomData.gameState) {
+            board = dataToBoard(roomData.gameState.board);
+            currentTurn = roomData.gameState.currentTurn;
+            gameActive = roomData.gameState.gameActive;
+            lastMove = roomData.gameState.lastMove;
+            moveNotations = roomData.gameState.moveNotations || [];
+            enPassantTarget = roomData.gameState.enPassantTarget;
+            castlingRights = roomData.gameState.castlingRights || { white: { king: true, queen: true }, black: { king: true, queen: true } };
+            renderBoard();
+            updateHistoryPanel();
+            updateGameStatus();
+        }
+        
+        document.getElementById('roomCodeDisplay').innerText = roomCode;
+        document.getElementById('roomInfo').style.display = 'inline-flex';
+        document.getElementById('onlineStatus').className = 'online-status connected';
+        document.getElementById('onlineStatus').innerHTML = '✅ Подключено!';
+        document.getElementById('playerRoleDisplay').style.display = 'block';
+        document.getElementById('playerRoleDisplay').innerHTML = '🎮 Ваша роль: ЧЁРНЫЕ (гость)';
+        
+        listenToFirebase();
+        alert(`✅ Вы присоединились к комнате ${roomCode}!`);
+    }
+    
+    function leaveRoom() {
+        if (currentRoomId && database) database.ref(`rooms/${currentRoomId}`).remove();
+        currentRoomId = null;
+        myRole = null;
+        isOnlineMode = false;
+        document.getElementById('roomInfo').style.display = 'none';
+        document.getElementById('onlineStatus').className = 'online-status waiting';
+        document.getElementById('onlineStatus').innerHTML = '⚪ Не в сети';
+        document.getElementById('playerRoleDisplay').style.display = 'none';
+        if (firebaseListener) firebaseListener();
+        alert('Вы вышли из комнаты');
+    }
+    
+    function copyRoomCode() {
+        const code = document.getElementById('roomCodeDisplay').innerText;
+        navigator.clipboard.writeText(code);
+        alert('📋 Код скопирован!');
+    }
+    
+    function updateGameStatus() {
+        const statusDiv = document.getElementById('gameStatus');
+        if (!gameActive) {
+            statusDiv.innerHTML = '⚙️ РЕЖИМ РАССТАНОВКИ';
+        } else if (isOnlineMode && myRole) {
+            statusDiv.innerHTML = currentTurn === myRole ? '🔥 ВАШ ХОД!' : `⏳ Ход ${currentTurn === 'white' ? 'БЕЛЫХ' : 'ЧЁРНЫХ'}`;
+        } else {
+            statusDiv.innerHTML = `♟ ИГРА ИДЕТ, ход: ${currentTurn === 'white' ? '⚪ белые' : '⚫ черные'}`;
+        }
+    }
+    
+    // ---------- ПЕРЕКЛЮЧЕНИЕ РЕЖИМОВ ----------
+    function switchToOnlineMode() {
+        if (isOnlineMode && currentRoomId) leaveRoom();
+        document.getElementById('onlinePanel').style.display = 'inline-flex';
+        document.getElementById('onlineModeBtn').style.background = '#2a6a2a';
+        document.getElementById('localModeBtn').style.background = '#4a3620';
+    }
+    
+    function switchToLocalMode() {
+        if (isOnlineMode && currentRoomId) leaveRoom();
+        document.getElementById('onlinePanel').style.display = 'none';
+        document.getElementById('onlineModeBtn').style.background = '#4a3620';
+        document.getElementById('localModeBtn').style.background = '#2a6a2a';
+        isOnlineMode = false;
+        myRole = null;
+        document.getElementById('playerRoleDisplay').style.display = 'none';
+        updateGameStatus();
+    }
+    
+    // ---------- ИНИЦИАЛИЗАЦИЯ ----------
+    function init() {
+        buildPalette();
+        board[7][4] = { type: 'king', color: 'white' };
+        board[0][4] = { type: 'king', color: 'black' };
+        renderBoard();
+        initialBoardState = copyBoard(board);
+        
+        document.getElementById('onlineModeBtn').onclick = switchToOnlineMode;
+        document.getElementById('localModeBtn').onclick = switchToLocalMode;
+        
+        document.getElementById('firstMoveWhite').onclick = () => {
+            firstTurn = 'white';
+            document.getElementById('firstMoveWhite').classList.add('active-first');
+            document.getElementById('firstMoveBlack').classList.remove('active-first');
+        };
+        document.getElementById('firstMoveBlack').onclick = () => {
+            firstTurn = 'black';
+            document.getElementById('firstMoveBlack').classList.add('active-first');
+            document.getElementById('firstMoveWhite').classList.remove('active-first');
+        };
+        
+        document.getElementById('startGameBtn').onclick = startGame;
+        document.getElementById('undoBtn').onclick = undoMove;
+        document.getElementById('resetBtn').onclick = () => { if (confirm('Сбросить позицию?')) resetToInitial(); };
+        document.getElementById('clearBoardBtn').onclick = () => { if (!gameActive && confirm('Очистить доску?')) clearBoard(); };
+        
+        document.getElementById('createRoomBtn').onclick = createRoom;
+        document.getElementById('joinRoomBtn').onclick = joinRoom;
+        document.getElementById('leaveRoomBtn').onclick = leaveRoom;
+        document.getElementById('copyRoomCodeBtn').onclick = copyRoomCode;
+        
+        const boardEl = document.getElementById('board');
+        boardEl.addEventListener('dragover', e => e.preventDefault());
+        boardEl.addEventListener('drop', e => {
+            e.preventDefault();
+            const target = e.target.closest('.cell');
+            if (!target) return;
+            const x = parseInt(target.dataset.x);
+            const y = parseInt(target.dataset.y);
+            const dragData = e.dataTransfer.getData('text/plain');
+            if (dragData && '♔♕♖♗♘♙♚♛♜♝♞♟'.includes(dragData) && !gameActive) {
+                setPieceAt(x, y, dragData);
+            }
+        });
+        
+        window.pendingPlacement = null;
+        const origHandler = handleCellClick;
+        window.handleCellClick = function(x, y) {
+            if (!gameActive && window.pendingPlacement) {
+                setPieceAt(x, y, window.pendingPlacement);
+                window.pendingPlacement = null;
+                return;
+            }
+            origHandler(x, y);
+        };
+        handleCellClick = window.handleCellClick;
+    }
+    
+    init();
+</script>
+</body>
+</html>
