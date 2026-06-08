@@ -11,7 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     
     <style>
-        * { user-select: none; -webkit-tap-highlight-color: transparent; }
+        * { user-select: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #2c3e2f 0%, #1a4d2a 100%);
             display: flex;
@@ -20,16 +20,14 @@
             min-height: 100vh;
             font-family: 'Segoe UI', 'Arial', sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
         }
         .game-container {
             background: #2b1b0e;
-            padding: 20px;
+            padding: 15px;
             border-radius: 32px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            position: relative;
             max-width: 100%;
-            overflow-x: auto;
         }
         
         /* Контейнер для доски с координатами */
@@ -37,18 +35,12 @@
             display: flex;
             justify-content: center;
             position: relative;
+            overflow-x: auto;
         }
         
         .board-container {
-            display: inline-block;
             position: relative;
-            margin-left: 30px; /* Отступ для цифр слева */
-        }
-        
-        @media (max-width: 600px) {
-            .board-container {
-                margin-left: 25px;
-            }
+            display: inline-block;
         }
         
         .board {
@@ -77,20 +69,20 @@
             font-size: 12px;
         }
         
-        /* Численные обозначения (слева) - абсолютное позиционирование */
+        /* Численные обозначения (слева) */
         .rank-labels {
             position: absolute;
-            left: -25px;
+            left: -28px;
             top: 0;
             height: min(70vw, 70vh, 500px);
             display: flex;
             flex-direction: column;
-            justify-content: space-around;
+            justify-content: space-between;
             font-family: monospace;
             font-weight: bold;
             color: #c99e6f;
             font-size: 12px;
-            width: 20px;
+            width: 24px;
             text-align: right;
         }
         
@@ -101,20 +93,28 @@
             height: 12.5%;
         }
         
+        /* Мобильные адаптации */
         @media (max-width: 600px) {
+            body { padding: 10px; }
+            .game-container { padding: 12px; }
             .rank-labels {
-                left: -20px;
+                left: -22px;
                 font-size: 10px;
+                width: 18px;
             }
-            .file-labels {
-                font-size: 10px;
-            }
+            .file-labels { font-size: 10px; }
             .board {
-                width: min(85vw, 85vh, 450px);
-                height: min(85vw, 85vh, 450px);
+                width: min(85vw, 85vh, 420px);
+                height: min(85vw, 85vh, 420px);
             }
             .file-labels {
-                width: min(85vw, 85vh, 450px);
+                width: min(85vw, 85vh, 420px);
+            }
+            .rank-labels {
+                height: min(85vw, 85vh, 420px);
+            }
+            .cell {
+                font-size: min(7vw, 7vh, 34px);
             }
         }
         
@@ -137,15 +137,15 @@
         @keyframes pulse { 0%,100% { background: #ff4444; } 50% { background: #ff0000; } }
         
         .controls {
-            margin-top: 20px;
+            margin-top: 15px;
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
             justify-content: center;
         }
         button {
-            background: #4a3620; border: none; color: #ffefcf; padding: 8px 16px;
-            font-size: 14px; font-weight: bold; border-radius: 40px; cursor: pointer;
+            background: #4a3620; border: none; color: #ffefcf; padding: 8px 14px;
+            font-size: 13px; font-weight: bold; border-radius: 40px; cursor: pointer;
             transition: 0.1s; font-family: monospace;
         }
         button:active { transform: scale(0.96); background: #2d1f10; }
@@ -166,9 +166,8 @@
         .first-move-btn { padding: 3px 10px; font-size: 11px; background: #3e2a1a; }
         .first-move-btn.active-first { background: #c99e6f; color: #1e2a0e; }
         
-        .status { background: #1f1a0e; color: #ffdd99; padding: 6px 12px; border-radius: 32px; font-size: 12px; text-align: center; }
+        .status { background: #1f1a0e; color: #ffdd99; padding: 6px 12px; border-radius: 32px; font-size: 12px; text-align: center; margin-top: 10px; }
         
-        /* Палитра фигур — переносим в отдельную строку */
         .piece-palette {
             display: flex;
             gap: 5px;
@@ -177,7 +176,7 @@
             border-radius: 60px;
             flex-wrap: wrap;
             justify-content: center;
-            margin-top: 10px;
+            margin-top: 12px;
         }
         .piece-icon {
             font-size: 24px;
@@ -202,16 +201,14 @@
         .promotion-dialog button { margin: 0 5px; padding: 8px 15px; font-size: 20px; }
         .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1999; }
         
-        .room-code { font-size: 18px; font-weight: bold; background: #1f1a0e; padding: 3px 10px; border-radius: 40px; letter-spacing: 2px; }
+        .room-code { font-size: 16px; font-weight: bold; background: #1f1a0e; padding: 3px 10px; border-radius: 40px; letter-spacing: 2px; }
         .player-role { background: #2a4a2a; padding: 4px 10px; border-radius: 20px; font-size: 11px; text-align: center; margin-top: 8px; display: inline-block; }
         
-        @media (max-width: 600px) {
-            .piece-icon { font-size: 18px; padding: 2px 6px; }
-            button { padding: 5px 12px; font-size: 11px; }
-            .first-move-btn { padding: 2px 8px; font-size: 10px; }
-            .history-item { font-size: 9px; padding: 2px 6px; }
-            .status { font-size: 10px; }
-            .controls { gap: 6px; }
+        @media (max-width: 480px) {
+            button { padding: 5px 10px; font-size: 11px; }
+            .first-move-btn { padding: 2px 6px; font-size: 10px; }
+            .piece-icon { font-size: 18px; padding: 2px 5px; }
+            .history-item { font-size: 9px; padding: 2px 5px; }
         }
     </style>
 </head>
@@ -348,7 +345,6 @@
     let castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
     let waitingForPromotion = false;
 
-    // Стандартная расстановка
     function setupStandardPosition() {
         board = Array(8).fill().map(() => Array(8).fill(null));
         for (let i = 0; i < 8; i++) {
@@ -567,7 +563,6 @@
         }
     }
 
-    // Проверка хода с учётом шаха (НЕ запрещаем ход, если фигура под боем)
     function isValidMoveWithCheck(fromX, fromY, toX, toY) {
         if (!board[fromX] || !board[fromX][fromY]) return false;
         const piece = board[fromX][fromY];
@@ -578,7 +573,6 @@
         const testBoard = copyBoard(board);
         const movingPiece = testBoard[fromX][fromY];
         
-        // Рокировка
         if (movingPiece.type === 'king' && Math.abs(toY - fromY) === 2) {
             const row = movingPiece.color === 'white' ? 7 : 0;
             const isKingSide = toY > fromY;
@@ -591,7 +585,6 @@
             return !isSquareAttacked(toX, toY, movingPiece.color, testBoard);
         }
         
-        // Взятие на проходе
         let isEnPassant = false;
         if (movingPiece.type === 'pawn' && Math.abs(toY - fromY) === 1 && !testBoard[toX]?.[toY] && enPassantTarget && enPassantTarget.x === toX && enPassantTarget.y === toY) {
             isEnPassant = true;
@@ -603,19 +596,17 @@
             testBoard[fromX][fromY] = null;
         }
         
-        // НЕ ЗАПРЕЩАЕМ ход, если фигура под боем
-        // Только проверяем, что свой король не остался под шахом
-        return !isSquareAttacked(getKingPos(movingPiece.color, testBoard)[0], getKingPos(movingPiece.color, testBoard)[1], movingPiece.color, testBoard);
-    }
-    
-    function getKingPos(color, testBoard) {
-        for (let i = 0; i < 8; i++) {
-            for (let j = 0; j < 8; j++) {
-                const p = testBoard[i]?.[j];
-                if (p && p.type === 'king' && p.color === color) return [i, j];
+        function getKingPos(col, test) {
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const p = test[i]?.[j];
+                    if (p && p.type === 'king' && p.color === col) return [i, j];
+                }
             }
+            return [-1, -1];
         }
-        return [-1, -1];
+        const kingPos = getKingPos(movingPiece.color, testBoard);
+        return !isSquareAttacked(kingPos[0], kingPos[1], movingPiece.color, testBoard);
     }
 
     function getAllValidMovesForPiece(x, y) {
@@ -656,13 +647,6 @@
         const isCastle = (piece.type === 'king' && Math.abs(toY - fromY) === 2);
         const isEnPassant = (piece.type === 'pawn' && Math.abs(toY - fromY) === 1 && !board[toX]?.[toY] && enPassantTarget && enPassantTarget.x === toX && enPassantTarget.y === toY);
         
-        const willBeCheck = (() => {
-            const testBoard = copyBoard(board);
-            testBoard[toX][toY] = piece;
-            testBoard[fromX][fromY] = null;
-            return isSquareAttacked(getKingPos(piece.color, testBoard)[0], getKingPos(piece.color, testBoard)[1], piece.color, testBoard);
-        })();
-        
         const files = 'abcdefgh';
         const ranks = '87654321';
         const pieceSymbols = { king: 'K', queen: 'Q', rook: 'R', bishop: 'B', knight: 'N', pawn: '' };
@@ -670,7 +654,6 @@
         if (piece.type === 'pawn' && (isCapture || isEnPassant)) notation = files[fromY];
         if (isCapture || isEnPassant) notation += 'x';
         notation += files[toY] + ranks[toX];
-        if (willBeCheck) notation += '+';
         if (isCastle) notation = toY === 6 ? '0-0' : '0-0-0';
         
         if (gameActive) saveToHistory(notation);
