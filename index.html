@@ -28,6 +28,7 @@
             border-radius: 32px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
             max-width: 100%;
+            position: relative;
         }
         
         .board-wrapper {
@@ -239,16 +240,22 @@
             right: 15px;
             display: flex;
             gap: 5px;
+            z-index: 100;
         }
         .lang-btn {
             background: #3e2a1a;
             padding: 4px 8px;
             font-size: 11px;
+            border-radius: 20px;
+            cursor: pointer;
+            color: #ffefcf;
+            border: none;
         }
         .lang-btn.active-lang {
             background: #c99e6f;
             color: #1e2a0e;
         }
+        .lang-btn:hover { opacity: 0.8; }
         
         @media (max-width: 480px) {
             button { padding: 5px 10px; font-size: 11px; }
@@ -263,8 +270,8 @@
 <div style="position: relative;">
     <div class="game-container">
         <div class="lang-selector">
-            <button id="langRu" class="lang-btn active-lang">RU</button>
-            <button id="langEn" class="lang-btn">EN</button>
+            <button class="lang-btn active-lang" data-lang="ru">RU</button>
+            <button class="lang-btn" data-lang="en">EN</button>
         </div>
         
         <div class="board-wrapper">
@@ -287,7 +294,7 @@
             </div>
             
             <div id="roomInfo" style="display: none;" class="online-panel">
-                <span class="room-code-label">🏠 Code:</span>
+                <span>🏠 Code:</span>
                 <span id="roomCodeDisplay" class="room-code"></span>
                 <button id="copyRoomCodeBtn">📋</button>
                 <button id="leaveRoomBtn">🚪 <span class="leave-text">Leave</span></button>
@@ -338,7 +345,7 @@
             noMoves: 'Ходов пока нет', opponentJoined: '✅ Противник подключился!', roomCreated: '✅ Комната создана! Код: ',
             roomJoined: '✅ Присоединились к ', roomNotFound: '❌ Комната не найдена!', roomFull: '❌ Комната заполнена!',
             needKing: 'Должен быть 1 белый и 1 чёрный король!', clearConfirm: 'Очистить доску?', resetConfirm: 'Сбросить позицию?',
-            newGameConfirm: 'Начать новую партию? Текущая игра будет потеряна.'
+            newGameConfirm: 'Начать новую партию? Текущая игра будет потеряна.', placePiece: 'Нажми на клетку, чтобы поставить '
         },
         en: {
             onlineMode: 'Online', localMode: 'Local', create: 'Create', join: 'Join', leave: 'Leave',
@@ -350,7 +357,7 @@
             noMoves: 'No moves yet', opponentJoined: '✅ Opponent connected!', roomCreated: '✅ Room created! Code: ',
             roomJoined: '✅ Joined room ', roomNotFound: '❌ Room not found!', roomFull: '❌ Room is full!',
             needKing: 'Must have 1 white and 1 black king!', clearConfirm: 'Clear board?', resetConfirm: 'Reset position?',
-            newGameConfirm: 'Start a new game? Current game will be lost.'
+            newGameConfirm: 'Start a new game? Current game will be lost.', placePiece: 'Click on a cell to place '
         }
     };
     
@@ -358,21 +365,41 @@
     
     function updateUILanguage() {
         const t = translations[currentLang];
-        document.querySelectorAll('.online-mode-text').forEach(el => el.innerText = t.onlineMode);
-        document.querySelectorAll('.local-mode-text').forEach(el => el.innerText = t.localMode);
-        document.querySelectorAll('.create-text').forEach(el => el.innerText = t.create);
-        document.querySelectorAll('.join-text').forEach(el => el.innerText = t.join);
-        document.querySelectorAll('.leave-text').forEach(el => el.innerText = t.leave);
-        document.querySelectorAll('.start-text').forEach(el => el.innerText = t.start);
-        document.querySelectorAll('.new-text').forEach(el => el.innerText = t.new);
-        document.querySelectorAll('.undo-text').forEach(el => el.innerText = t.undo);
-        document.querySelectorAll('.reset-text').forEach(el => el.innerText = t.reset);
-        document.querySelectorAll('.clear-text').forEach(el => el.innerText = t.clear);
-        document.querySelectorAll('.first-move-label').forEach(el => el.innerText = t.first);
-        document.querySelectorAll('.history-title-text').forEach(el => el.innerText = t.history);
-        document.querySelectorAll('.help-text').forEach(el => el.innerText = t.help);
-        document.querySelectorAll('.room-code-label').forEach(el => el.innerText = '🏠 Code:');
+        
+        // Обновляем все тексты с классами
+        document.querySelectorAll('.online-mode-text').forEach(el => { if (el) el.innerText = t.onlineMode; });
+        document.querySelectorAll('.local-mode-text').forEach(el => { if (el) el.innerText = t.localMode; });
+        document.querySelectorAll('.create-text').forEach(el => { if (el) el.innerText = t.create; });
+        document.querySelectorAll('.join-text').forEach(el => { if (el) el.innerText = t.join; });
+        document.querySelectorAll('.leave-text').forEach(el => { if (el) el.innerText = t.leave; });
+        document.querySelectorAll('.start-text').forEach(el => { if (el) el.innerText = t.start; });
+        document.querySelectorAll('.new-text').forEach(el => { if (el) el.innerText = t.new; });
+        document.querySelectorAll('.undo-text').forEach(el => { if (el) el.innerText = t.undo; });
+        document.querySelectorAll('.reset-text').forEach(el => { if (el) el.innerText = t.reset; });
+        document.querySelectorAll('.clear-text').forEach(el => { if (el) el.innerText = t.clear; });
+        document.querySelectorAll('.first-move-label').forEach(el => { if (el) el.innerText = t.first; });
+        document.querySelectorAll('.history-title-text').forEach(el => { if (el) el.innerText = t.history; });
+        document.querySelectorAll('.help-text').forEach(el => { if (el) el.innerText = t.help; });
+        
+        // Обновляем статус
         updateGameStatus();
+        
+        // Обновляем историю
+        updateHistoryPanel();
+    }
+    
+    // Функция для применения языка ко всем динамическим элементам
+    function applyLanguage() {
+        updateUILanguage();
+        
+        // Обновляем текст роли игрока
+        if (isOnlineMode && myRole) {
+            const t = translations[currentLang];
+            const roleDisplay = document.getElementById('playerRoleDisplay');
+            if (roleDisplay) {
+                roleDisplay.innerHTML = myRole === 'white' ? t.whiteCreator : t.blackGuest;
+            }
+        }
     }
     
     // ---------- FIREBASE КОНФИГУРАЦИЯ ----------
@@ -1219,6 +1246,7 @@
         updateCoordinates();
         setupStandardPosition();
         
+        // Назначаем обработчики кнопок
         document.getElementById('onlineModeBtn').onclick = switchToOnlineMode;
         document.getElementById('localModeBtn').onclick = switchToLocalMode;
         
@@ -1254,22 +1282,23 @@
         document.getElementById('leaveRoomBtn').onclick = leaveRoom;
         document.getElementById('copyRoomCodeBtn').onclick = copyRoomCode;
         
-        document.getElementById('langRu').onclick = () => {
-            currentLang = 'ru';
-            document.getElementById('langRu').classList.add('active-lang');
-            document.getElementById('langEn').classList.remove('active-lang');
-            updateUILanguage();
-            updateGameStatus();
-            updateHistoryPanel();
-        };
-        document.getElementById('langEn').onclick = () => {
-            currentLang = 'en';
-            document.getElementById('langEn').classList.add('active-lang');
-            document.getElementById('langRu').classList.remove('active-lang');
-            updateUILanguage();
-            updateGameStatus();
-            updateHistoryPanel();
-        };
+        // Назначаем обработчики кнопок переключения языка
+        const langButtons = document.querySelectorAll('.lang-btn');
+        langButtons.forEach(btn => {
+            btn.onclick = (e) => {
+                const lang = btn.getAttribute('data-lang');
+                if (!lang) return;
+                
+                currentLang = lang;
+                
+                // Обновляем активный класс
+                langButtons.forEach(b => b.classList.remove('active-lang'));
+                btn.classList.add('active-lang');
+                
+                // Применяем язык
+                applyLanguage();
+            };
+        });
         
         const boardEl = document.getElementById('board');
         boardEl.addEventListener('dragover', e => e.preventDefault());
