@@ -30,6 +30,10 @@
             max-width: 100%;
         }
         
+<<<<<<< HEAD
+=======
+        /* Контейнер для доски с координатами */
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         .board-wrapper {
             display: flex;
             justify-content: center;
@@ -55,6 +59,10 @@
             z-index: 1;
         }
         
+<<<<<<< HEAD
+=======
+        /* Буквенные обозначения (снизу) */
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         .file-labels {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
@@ -67,6 +75,10 @@
             font-size: 12px;
         }
         
+<<<<<<< HEAD
+=======
+        /* Численные обозначения (слева) */
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         .rank-labels {
             position: absolute;
             left: -28px;
@@ -90,6 +102,7 @@
             height: 12.5%;
         }
         
+<<<<<<< HEAD
         @media (max-width: 600px) {
             body { padding: 10px; }
             .game-container { padding: 12px; }
@@ -99,6 +112,31 @@
             .file-labels { width: min(85vw, 85vh, 420px); }
             .rank-labels { height: min(85vw, 85vh, 420px); }
             .cell { font-size: min(7vw, 7vh, 34px); }
+=======
+        /* Мобильные адаптации */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .game-container { padding: 12px; }
+            .rank-labels {
+                left: -22px;
+                font-size: 10px;
+                width: 18px;
+            }
+            .file-labels { font-size: 10px; }
+            .board {
+                width: min(85vw, 85vh, 420px);
+                height: min(85vw, 85vh, 420px);
+            }
+            .file-labels {
+                width: min(85vw, 85vh, 420px);
+            }
+            .rank-labels {
+                height: min(85vw, 85vh, 420px);
+            }
+            .cell {
+                font-size: min(7vw, 7vh, 34px);
+            }
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         }
         
         .cell {
@@ -127,6 +165,7 @@
             justify-content: center;
         }
         button {
+<<<<<<< HEAD
             background: #4a3620;
             border: none;
             color: #ffefcf;
@@ -137,10 +176,16 @@
             cursor: pointer;
             transition: 0.1s;
             font-family: monospace;
+=======
+            background: #4a3620; border: none; color: #ffefcf; padding: 8px 14px;
+            font-size: 13px; font-weight: bold; border-radius: 40px; cursor: pointer;
+            transition: 0.1s; font-family: monospace;
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         }
         button:active { transform: scale(0.96); background: #2d1f10; }
         
         .online-panel {
+<<<<<<< HEAD
             background: #1f2a1b;
             padding: 5px 12px;
             border-radius: 60px;
@@ -148,23 +193,33 @@
             gap: 8px;
             align-items: center;
             flex-wrap: wrap;
+=======
+            background: #1f2a1b; padding: 5px 12px; border-radius: 60px;
+            display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap;
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         }
         .online-status { background: #2a4a2a; padding: 4px 8px; border-radius: 20px; font-size: 11px; }
         .online-status.connected { background: #2a6a2a; }
         .online-status.waiting { background: #6a4a2a; }
         
         .first-move-selector {
+<<<<<<< HEAD
             background: #2a4a2a;
             padding: 4px 10px;
             border-radius: 40px;
             display: inline-flex;
             gap: 8px;
             align-items: center;
+=======
+            background: #2a4a2a; padding: 4px 10px; border-radius: 40px;
+            display: inline-flex; gap: 8px; align-items: center;
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         }
         .first-move-selector span { font-size: 11px; color: #ffdd99; }
         .first-move-btn { padding: 3px 10px; font-size: 11px; background: #3e2a1a; }
         .first-move-btn.active-first { background: #c99e6f; color: #1e2a0e; }
         
+<<<<<<< HEAD
         .status {
             background: #1f1a0e;
             color: #ffdd99;
@@ -174,6 +229,9 @@
             text-align: center;
             margin-top: 10px;
         }
+=======
+        .status { background: #1f1a0e; color: #ffdd99; padding: 6px 12px; border-radius: 32px; font-size: 12px; text-align: center; margin-top: 10px; }
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         
         .piece-palette {
             display: flex;
@@ -194,6 +252,7 @@
         }
         .piece-icon:active { background: #b87c3a; }
         
+<<<<<<< HEAD
         .history-panel {
             background: #1f1a0e;
             border-radius: 16px;
@@ -213,6 +272,12 @@
             font-family: monospace;
             cursor: pointer;
         }
+=======
+        .history-panel { background: #1f1a0e; border-radius: 16px; padding: 8px; margin-top: 12px; max-height: 120px; overflow-y: auto; }
+        .history-title { color: #ffdd99; font-size: 11px; margin-bottom: 6px; text-align: center; }
+        .history-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+        .history-item { background: #3e2a1a; color: #ffefcf; padding: 3px 8px; border-radius: 20px; font-size: 11px; font-family: monospace; cursor: pointer; }
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         .history-item.current { background: #c99e6f; color: #1e2a0e; }
         
         .promotion-dialog {
@@ -233,6 +298,7 @@
         .room-code { font-size: 16px; font-weight: bold; background: #1f1a0e; padding: 3px 10px; border-radius: 40px; letter-spacing: 2px; }
         .player-role { background: #2a4a2a; padding: 4px 10px; border-radius: 20px; font-size: 11px; text-align: center; margin-top: 8px; display: inline-block; }
         
+<<<<<<< HEAD
         .lang-selector {
             position: absolute;
             top: 15px;
@@ -250,23 +316,31 @@
             color: #1e2a0e;
         }
         
+=======
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         @media (max-width: 480px) {
             button { padding: 5px 10px; font-size: 11px; }
             .first-move-btn { padding: 2px 6px; font-size: 10px; }
             .piece-icon { font-size: 18px; padding: 2px 5px; }
             .history-item { font-size: 9px; padding: 2px 5px; }
+<<<<<<< HEAD
             .lang-btn { padding: 2px 6px; font-size: 10px; }
+=======
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         }
     </style>
 </head>
 <body>
 <div style="position: relative;">
     <div class="game-container">
+<<<<<<< HEAD
         <div class="lang-selector">
             <button id="langRu" class="lang-btn active-lang">RU</button>
             <button id="langEn" class="lang-btn">EN</button>
         </div>
         
+=======
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         <div class="board-wrapper">
             <div class="board-container">
                 <div class="rank-labels" id="rankLabels"></div>
@@ -276,6 +350,7 @@
         </div>
         
         <div class="controls">
+<<<<<<< HEAD
             <button id="onlineModeBtn" style="background:#2a6a2a">🌐 <span class="online-mode-text">Online</span></button>
             <button id="localModeBtn" style="background:#4a3620">🏠 <span class="local-mode-text">Local</span></button>
             
@@ -283,6 +358,15 @@
                 <button id="createRoomBtn">➕ <span class="create-text">Create</span></button>
                 <input type="text" id="roomCodeInput" placeholder="Code" maxlength="6" style="width:70px">
                 <button id="joinRoomBtn">🔗 <span class="join-text">Join</span></button>
+=======
+            <button id="onlineModeBtn" style="background:#2a6a2a">🌐 Онлайн</button>
+            <button id="localModeBtn" style="background:#4a3620">🏠 Локально</button>
+            
+            <div id="onlinePanel" style="display: none;" class="online-panel">
+                <button id="createRoomBtn">➕ Создать</button>
+                <input type="text" id="roomCodeInput" placeholder="Код" maxlength="6" style="width:70px">
+                <button id="joinRoomBtn">🔗 Войти</button>
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
                 <span id="onlineStatus" class="online-status waiting">⚪</span>
             </div>
             
@@ -290,20 +374,36 @@
                 <span class="room-code-label">🏠 Code:</span>
                 <span id="roomCodeDisplay" class="room-code"></span>
                 <button id="copyRoomCodeBtn">📋</button>
+<<<<<<< HEAD
                 <button id="leaveRoomBtn">🚪 <span class="leave-text">Leave</span></button>
             </div>
             
             <div class="first-move-selector">
                 <span class="first-move-label">🎯 First:</span>
+=======
+                <button id="leaveRoomBtn">🚪</button>
+            </div>
+            
+            <div class="first-move-selector">
+                <span>🎯 Первый:</span>
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
                 <button id="firstMoveWhite" class="first-move-btn active-first">⚪</button>
                 <button id="firstMoveBlack" class="first-move-btn">⚫</button>
             </div>
             
+<<<<<<< HEAD
             <button id="startGameBtn">▶ <span class="start-text">START</span></button>
             <button id="newGameBtn">♔ <span class="new-text">New</span></button>
             <button id="undoBtn">↩ <span class="undo-text">Undo</span></button>
             <button id="resetBtn">🔄 <span class="reset-text">Reset</span></button>
             <button id="clearBoardBtn">🗑 <span class="clear-text">Clear</span></button>
+=======
+            <button id="startGameBtn">▶ СТАРТ</button>
+            <button id="newGameBtn">♔ Новая</button>
+            <button id="undoBtn">↩ Отмена</button>
+            <button id="resetBtn">🔄 Сброс</button>
+            <button id="clearBoardBtn">🗑 Очистить</button>
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         </div>
         
         <div class="piece-palette" id="piecePalette"></div>
@@ -312,7 +412,11 @@
             <div id="playerRoleDisplay" class="player-role" style="display: none;"></div>
         </div>
         
+<<<<<<< HEAD
         <div class="status" id="gameStatus">⚙️ SETUP MODE</div>
+=======
+        <div class="status" id="gameStatus">⚙️ РЕЖИМ РАССТАНОВКИ</div>
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
 
         <div class="history-panel" id="historyPanel" style="display: none;">
             <div class="history-title">📜 <span class="history-title-text">MOVE HISTORY</span></div>
@@ -321,11 +425,17 @@
     </div>
     
     <p style="color: #d4c2a5; font-size: 11px; text-align: center; margin-top: 10px;">
+<<<<<<< HEAD
         <span class="help-text">🌐 Online: Create room → send code → press START | 🏠 Local: Play together on one device</span>
+=======
+        🌐 Онлайн: создайте комнату → отправьте код → нажмите СТАРТ<br>
+        🏠 Локально: играйте вдвоём за одним устройством
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
     </p>
 </div>
 
 <script>
+<<<<<<< HEAD
     // ---------- ПЕРЕВОДЫ ----------
     const translations = {
         ru: {
@@ -375,6 +485,8 @@
         updateGameStatus();
     }
     
+=======
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
     // ---------- FIREBASE КОНФИГУРАЦИЯ ----------
     const firebaseConfig = {
         apiKey: "AIzaSyAnZNTKOI7NhS0ZURZiiF-KjuCGb3rjPlM",
@@ -901,9 +1013,14 @@
             item.onclick = () => { if (gameActive) restoreFromHistory(i); };
             historyList.appendChild(item);
         }
+<<<<<<< HEAD
         const t = translations[currentLang];
         if (moveNotations.length === 0) {
             historyList.innerHTML = `<div style="color: #888; font-size: 11px;">${t.noMoves}</div>`;
+=======
+        if (moveNotations.length === 0) {
+            historyList.innerHTML = '<div style="color: #888; font-size: 11px;">Ходов пока нет</div>';
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         }
     }
 
@@ -1070,7 +1187,11 @@
     }
     
     async function createRoom() {
+<<<<<<< HEAD
         if (!database) { alert('Firebase not connected!'); return; }
+=======
+        if (!database) { alert('Firebase не подключен!'); return; }
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         
         const roomCode = generateRoomCode();
         currentRoomId = roomCode;
@@ -1100,36 +1221,62 @@
             document.getElementById('onlineStatus').className = 'online-status waiting';
             document.getElementById('onlineStatus').innerHTML = '⏳';
             document.getElementById('playerRoleDisplay').style.display = 'block';
+<<<<<<< HEAD
             const t = translations[currentLang];
             document.getElementById('playerRoleDisplay').innerHTML = t.whiteCreator;
             
             listenToFirebase();
             alert(t.roomCreated + roomCode);
+=======
+            document.getElementById('playerRoleDisplay').innerHTML = '🎮 БЕЛЫЕ (создатель)';
+            
+            listenToFirebase();
+            alert(`✅ Комната создана! Код: ${roomCode}`);
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
             
             database.ref(`rooms/${roomCode}/blackPlayer`).on('value', (snapshot) => {
                 if (snapshot.val()) {
                     document.getElementById('onlineStatus').className = 'online-status connected';
                     document.getElementById('onlineStatus').innerHTML = '✅';
+<<<<<<< HEAD
                     alert(t.opponentJoined);
                 }
             });
         } catch(e) {
             alert('Error: ' + e.message);
+=======
+                    alert('✅ Противник подключился!');
+                }
+            });
+        } catch(e) {
+            alert('Ошибка: ' + e.message);
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         }
     }
     
     async function joinRoom() {
         const roomCode = document.getElementById('roomCodeInput').value.toUpperCase().trim();
+<<<<<<< HEAD
         if (!roomCode) { alert('Enter room code!'); return; }
         if (!database) { alert('Firebase not connected!'); return; }
+=======
+        if (!roomCode) { alert('Введите код!'); return; }
+        if (!database) { alert('Firebase не подключен!'); return; }
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         
         try {
             const roomRef = database.ref(`rooms/${roomCode}`);
             const snapshot = await roomRef.get();
+<<<<<<< HEAD
             const t = translations[currentLang];
             
             if (!snapshot.exists()) { alert(t.roomNotFound); return; }
             if (snapshot.val().blackPlayer) { alert(t.roomFull); return; }
+=======
+            
+            if (!snapshot.exists()) { alert('❌ Комната не найдена!'); return; }
+            if (snapshot.val().blackPlayer) { alert('❌ Комната заполнена!'); return; }
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
             
             currentRoomId = roomCode;
             myPlayerId = auth?.currentUser?.uid || 'player_' + Date.now();
@@ -1155,12 +1302,21 @@
             document.getElementById('onlineStatus').className = 'online-status connected';
             document.getElementById('onlineStatus').innerHTML = '✅';
             document.getElementById('playerRoleDisplay').style.display = 'block';
+<<<<<<< HEAD
             document.getElementById('playerRoleDisplay').innerHTML = t.blackGuest;
             
             listenToFirebase();
             alert(t.roomJoined + roomCode);
         } catch(e) {
             alert('Error: ' + e.message);
+=======
+            document.getElementById('playerRoleDisplay').innerHTML = '🎮 ЧЁРНЫЕ (гость)';
+            
+            listenToFirebase();
+            alert(`✅ Присоединились к ${roomCode}!`);
+        } catch(e) {
+            alert('Ошибка: ' + e.message);
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         }
     }
     
@@ -1190,7 +1346,11 @@
         } else if (isOnlineMode && myRole) {
             statusDiv.innerHTML = currentTurn === myRole ? t.yourTurn : `${t.waiting} ${currentTurn === 'white' ? t.white : t.black}`;
         } else {
+<<<<<<< HEAD
             statusDiv.innerHTML = `${t.turn} ${currentTurn === 'white' ? t.white : t.black}`;
+=======
+            statusDiv.innerHTML = `♟ ХОД: ${currentTurn === 'white' ? 'БЕЛЫЕ' : 'ЧЁРНЫЕ'}`;
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
         }
     }
     
@@ -1235,8 +1395,12 @@
         
         document.getElementById('startGameBtn').onclick = startGame;
         document.getElementById('newGameBtn').onclick = () => { 
+<<<<<<< HEAD
             const t = translations[currentLang];
             if (gameActive && !confirm(t.newGameConfirm)) return;
+=======
+            if (gameActive && !confirm('Начать новую партию? Текущая игра будет потеряна.')) return;
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
             setupStandardPosition();
         };
         document.getElementById('undoBtn').onclick = undoMove;
@@ -1298,7 +1462,10 @@
         handleCellClick = window.handleCellClick;
         
         renderBoard();
+<<<<<<< HEAD
         updateUILanguage();
+=======
+>>>>>>> 091404945af1619e672ebf2490a3b01dc5250fc7
     }
     
     init();
