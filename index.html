@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Шахматная песочница — Онлайн-уроки с тренером</title>
+    <title>Chess Sandbox — Interactive Board for Trainers</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -11,7 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     
     <style>
-        * { user-select: none; -webkit-tap-highlight-color: transparent; }
+        * { user-select: none; -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #2c3e2f 0%, #1a4d2a 100%);
             display: flex;
@@ -20,15 +20,28 @@
             min-height: 100vh;
             font-family: 'Segoe UI', 'Arial', sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 15px;
         }
         .game-container {
             background: #2b1b0e;
-            padding: 20px;
+            padding: 15px;
             border-radius: 32px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            position: relative;
+            max-width: 100%;
         }
+        
+        .board-wrapper {
+            display: flex;
+            justify-content: center;
+            position: relative;
+            overflow-x: auto;
+        }
+        
+        .board-container {
+            position: relative;
+            display: inline-block;
+        }
+        
         .board {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
@@ -36,14 +49,63 @@
             border: 3px solid #654321;
             border-radius: 8px;
             overflow: hidden;
-            width: min(70vw, 70vh, 600px);
-            height: min(70vw, 70vh, 600px);
+            width: min(70vw, 70vh, 500px);
+            height: min(70vw, 70vh, 500px);
+            position: relative;
+            z-index: 1;
         }
+        
+        .file-labels {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            width: min(70vw, 70vh, 500px);
+            margin-top: 5px;
+            text-align: center;
+            font-family: monospace;
+            font-weight: bold;
+            color: #c99e6f;
+            font-size: 12px;
+        }
+        
+        .rank-labels {
+            position: absolute;
+            left: -28px;
+            top: 0;
+            height: min(70vw, 70vh, 500px);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            font-family: monospace;
+            font-weight: bold;
+            color: #c99e6f;
+            font-size: 12px;
+            width: 24px;
+            text-align: right;
+        }
+        
+        .rank-labels span {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            height: 12.5%;
+        }
+        
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .game-container { padding: 12px; }
+            .rank-labels { left: -22px; font-size: 10px; width: 18px; }
+            .file-labels { font-size: 10px; }
+            .board { width: min(85vw, 85vh, 420px); height: min(85vw, 85vh, 420px); }
+            .file-labels { width: min(85vw, 85vh, 420px); }
+            .rank-labels { height: min(85vw, 85vh, 420px); }
+            .cell { font-size: min(7vw, 7vh, 34px); }
+        }
+        
         .cell {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: min(6vw, 6vh, 48px);
+            font-size: min(6vw, 6vh, 40px);
             cursor: pointer;
             transition: 0.05s linear;
             aspect-ratio: 1 / 1;
@@ -56,109 +118,263 @@
         .cell.last-move { background: #b7d968 !important; }
         .cell.check { background: #ff4444 !important; animation: pulse 0.5s; }
         @keyframes pulse { 0%,100% { background: #ff4444; } 50% { background: #ff0000; } }
-        .controls { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+        
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
         button {
-            background: #4a3620; border: none; color: #ffefcf; padding: 10px 20px;
-            font-size: 16px; font-weight: bold; border-radius: 40px; cursor: pointer;
-            transition: 0.1s; font-family: monospace;
+            background: #4a3620;
+            border: none;
+            color: #ffefcf;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.1s;
+            font-family: monospace;
         }
         button:active { transform: scale(0.96); background: #2d1f10; }
+        
         .online-panel {
-            background: #1f2a1b; padding: 8px 16px; border-radius: 60px;
-            display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap;
+            background: #1f2a1b;
+            padding: 5px 12px;
+            border-radius: 60px;
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
         }
         .online-status { background: #2a4a2a; padding: 4px 8px; border-radius: 20px; font-size: 11px; }
         .online-status.connected { background: #2a6a2a; }
         .online-status.waiting { background: #6a4a2a; }
+        
         .first-move-selector {
-            background: #2a4a2a; padding: 5px 12px; border-radius: 40px;
-            display: inline-flex; gap: 10px; align-items: center;
+            background: #2a4a2a;
+            padding: 4px 10px;
+            border-radius: 40px;
+            display: inline-flex;
+            gap: 8px;
+            align-items: center;
         }
-        .first-move-selector span { font-size: 12px; color: #ffdd99; }
-        .first-move-btn { padding: 4px 12px; font-size: 12px; background: #3e2a1a; }
+        .first-move-selector span { font-size: 11px; color: #ffdd99; }
+        .first-move-btn { padding: 3px 10px; font-size: 11px; background: #3e2a1a; }
         .first-move-btn.active-first { background: #c99e6f; color: #1e2a0e; }
-        .status { background: #1f1a0e; color: #ffdd99; padding: 8px 16px; border-radius: 32px; font-size: 14px; text-align: center; }
-        .piece-palette { display: flex; gap: 5px; background: #3e2a1a; padding: 8px; border-radius: 60px; flex-wrap: wrap; }
-        .piece-icon { font-size: 28px; background: #5e3a1e; padding: 4px 10px; border-radius: 30px; cursor: grab; }
+        
+        .status {
+            background: #1f1a0e;
+            color: #ffdd99;
+            padding: 6px 12px;
+            border-radius: 32px;
+            font-size: 12px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .piece-palette {
+            display: flex;
+            gap: 5px;
+            background: #3e2a1a;
+            padding: 8px;
+            border-radius: 60px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 12px;
+        }
+        .piece-icon {
+            font-size: 24px;
+            background: #5e3a1e;
+            padding: 4px 8px;
+            border-radius: 30px;
+            cursor: grab;
+        }
         .piece-icon:active { background: #b87c3a; }
-        .history-panel { background: #1f1a0e; border-radius: 16px; padding: 10px; margin-top: 15px; max-height: 150px; overflow-y: auto; }
-        .history-title { color: #ffdd99; font-size: 12px; margin-bottom: 8px; text-align: center; }
-        .history-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-        .history-item { background: #3e2a1a; color: #ffefcf; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-family: monospace; cursor: pointer; }
+        
+        .history-panel {
+            background: #1f1a0e;
+            border-radius: 16px;
+            padding: 8px;
+            margin-top: 12px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .history-title { color: #ffdd99; font-size: 11px; margin-bottom: 6px; text-align: center; }
+        .history-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+        .history-item {
+            background: #3e2a1a;
+            color: #ffefcf;
+            padding: 3px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-family: monospace;
+            cursor: pointer;
+        }
         .history-item.current { background: #c99e6f; color: #1e2a0e; }
+        
         .promotion-dialog {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #2b1b0e; padding: 20px; border-radius: 16px; border: 2px solid #c99e6f;
-            z-index: 2000; text-align: center;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2b1b0e;
+            padding: 20px;
+            border-radius: 16px;
+            border: 2px solid #c99e6f;
+            z-index: 2000;
+            text-align: center;
         }
         .promotion-dialog button { margin: 0 5px; padding: 8px 15px; font-size: 20px; }
         .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1999; }
-        .room-code { font-size: 20px; font-weight: bold; background: #1f1a0e; padding: 4px 12px; border-radius: 40px; letter-spacing: 2px; }
-        .player-role { background: #2a4a2a; padding: 5px 10px; border-radius: 20px; font-size: 12px; text-align: center; margin-top: 8px; display: inline-block; }
-        @media (max-width: 600px) {
-            .piece-icon { font-size: 20px; padding: 2px 8px; }
-            button { padding: 6px 12px; font-size: 12px; }
-            .first-move-btn { padding: 2px 8px; font-size: 10px; }
+        
+        .room-code { font-size: 16px; font-weight: bold; background: #1f1a0e; padding: 3px 10px; border-radius: 40px; letter-spacing: 2px; }
+        .player-role { background: #2a4a2a; padding: 4px 10px; border-radius: 20px; font-size: 11px; text-align: center; margin-top: 8px; display: inline-block; }
+        
+        .lang-selector {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            display: flex;
+            gap: 5px;
+        }
+        .lang-btn {
+            background: #3e2a1a;
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+        .lang-btn.active-lang {
+            background: #c99e6f;
+            color: #1e2a0e;
+        }
+        
+        @media (max-width: 480px) {
+            button { padding: 5px 10px; font-size: 11px; }
+            .first-move-btn { padding: 2px 6px; font-size: 10px; }
+            .piece-icon { font-size: 18px; padding: 2px 5px; }
+            .history-item { font-size: 9px; padding: 2px 5px; }
+            .lang-btn { padding: 2px 6px; font-size: 10px; }
         }
     </style>
 </head>
 <body>
-<div>
+<div style="position: relative;">
     <div class="game-container">
-        <div class="board" id="board"></div>
+        <div class="lang-selector">
+            <button id="langRu" class="lang-btn active-lang">RU</button>
+            <button id="langEn" class="lang-btn">EN</button>
+        </div>
+        
+        <div class="board-wrapper">
+            <div class="board-container">
+                <div class="rank-labels" id="rankLabels"></div>
+                <div class="board" id="board"></div>
+                <div class="file-labels" id="fileLabels"></div>
+            </div>
+        </div>
         
         <div class="controls">
-            <button id="onlineModeBtn" style="background:#2a6a2a">🌐 Онлайн-режим</button>
-            <button id="localModeBtn" style="background:#4a3620">🏠 Локальный режим</button>
+            <button id="onlineModeBtn" style="background:#2a6a2a">🌐 <span class="online-mode-text">Online</span></button>
+            <button id="localModeBtn" style="background:#4a3620">🏠 <span class="local-mode-text">Local</span></button>
             
             <div id="onlinePanel" style="display: none;" class="online-panel">
-                <button id="createRoomBtn">➕ Создать комнату</button>
-                <input type="text" id="roomCodeInput" placeholder="Код комнаты" maxlength="6">
-                <button id="joinRoomBtn">🔗 Присоединиться</button>
-                <span id="onlineStatus" class="online-status waiting">⚪ Не в сети</span>
+                <button id="createRoomBtn">➕ <span class="create-text">Create</span></button>
+                <input type="text" id="roomCodeInput" placeholder="Code" maxlength="6" style="width:70px">
+                <button id="joinRoomBtn">🔗 <span class="join-text">Join</span></button>
+                <span id="onlineStatus" class="online-status waiting">⚪</span>
             </div>
             
             <div id="roomInfo" style="display: none;" class="online-panel">
-                <span>🏠 Код: </span>
+                <span class="room-code-label">🏠 Code:</span>
                 <span id="roomCodeDisplay" class="room-code"></span>
-                <button id="copyRoomCodeBtn">📋 Копировать</button>
-                <button id="leaveRoomBtn">🚪 Выйти</button>
+                <button id="copyRoomCodeBtn">📋</button>
+                <button id="leaveRoomBtn">🚪 <span class="leave-text">Leave</span></button>
             </div>
             
             <div class="first-move-selector">
-                <span>🎯 Первый ход:</span>
-                <button id="firstMoveWhite" class="first-move-btn active-first">⚪ Белые</button>
-                <button id="firstMoveBlack" class="first-move-btn">⚫ Чёрные</button>
+                <span class="first-move-label">🎯 First:</span>
+                <button id="firstMoveWhite" class="first-move-btn active-first">⚪</button>
+                <button id="firstMoveBlack" class="first-move-btn">⚫</button>
             </div>
             
-            <button id="startGameBtn">▶ СТАРТ ИГРЫ</button>
-            <button id="undoBtn">↩ Отмена хода</button>
-            <button id="resetBtn">🔄 Сброс к старту</button>
-            <button id="clearBoardBtn">🗑 Очистить доску</button>
+            <button id="startGameBtn">▶ <span class="start-text">START</span></button>
+            <button id="newGameBtn">♔ <span class="new-text">New</span></button>
+            <button id="undoBtn">↩ <span class="undo-text">Undo</span></button>
+            <button id="resetBtn">🔄 <span class="reset-text">Reset</span></button>
+            <button id="clearBoardBtn">🗑 <span class="clear-text">Clear</span></button>
         </div>
         
-        <div style="display: flex; justify-content: space-between; margin-top: 12px; gap: 8px; flex-wrap: wrap;">
-            <div class="status" id="gameStatus">⚙️ РЕЖИМ РАССТАНОВКИ</div>
-            <div class="piece-palette" id="piecePalette"></div>
-        </div>
+        <div class="piece-palette" id="piecePalette"></div>
         
         <div style="text-align: center;">
             <div id="playerRoleDisplay" class="player-role" style="display: none;"></div>
         </div>
+        
+        <div class="status" id="gameStatus">⚙️ SETUP MODE</div>
 
         <div class="history-panel" id="historyPanel" style="display: none;">
-            <div class="history-title">📜 ИСТОРИЯ ХОДОВ</div>
+            <div class="history-title">📜 <span class="history-title-text">MOVE HISTORY</span></div>
             <div class="history-list" id="historyList"></div>
         </div>
     </div>
     
-    <p style="color: #d4c2a5; font-size: 12px; text-align: center; margin-top: 12px;">
-        🌐 <strong>ОНЛАЙН-РЕЖИМ:</strong> Создайте комнату → отправьте код ученику → нажмите СТАРТ!<br>
-        🏠 <strong>ЛОКАЛЬНЫЙ РЕЖИМ:</strong> Играйте вдвоём за одним устройством.
+    <p style="color: #d4c2a5; font-size: 11px; text-align: center; margin-top: 10px;">
+        <span class="help-text">🌐 Online: Create room → send code → press START | 🏠 Local: Play together on one device</span>
     </p>
 </div>
 
 <script>
+    // ---------- ПЕРЕВОДЫ ----------
+    const translations = {
+        ru: {
+            onlineMode: 'Онлайн', localMode: 'Локально', create: 'Создать', join: 'Войти', leave: 'Выйти',
+            start: 'СТАРТ', new: 'Новая', undo: 'Отмена', reset: 'Сброс', clear: 'Очистить',
+            first: 'Первый:', setup: '⚙️ РЕЖИМ РАССТАНОВКИ', yourTurn: '🔥 ВАШ ХОД!',
+            turn: '♟ ХОД:', white: 'БЕЛЫЕ', black: 'ЧЁРНЫЕ', waiting: '⏳ Ход', history: 'ИСТОРИЯ ХОДОВ',
+            help: '🌐 Онлайн: создайте комнату → отправьте код → нажмите СТАРТ | 🏠 Локально: играйте вдвоём за одним устройством',
+            whiteCreator: '🎮 БЕЛЫЕ (создатель)', blackGuest: '🎮 ЧЁРНЫЕ (гость)',
+            noMoves: 'Ходов пока нет', opponentJoined: '✅ Противник подключился!', roomCreated: '✅ Комната создана! Код: ',
+            roomJoined: '✅ Присоединились к ', roomNotFound: '❌ Комната не найдена!', roomFull: '❌ Комната заполнена!',
+            needKing: 'Должен быть 1 белый и 1 чёрный король!', clearConfirm: 'Очистить доску?', resetConfirm: 'Сбросить позицию?',
+            newGameConfirm: 'Начать новую партию? Текущая игра будет потеряна.'
+        },
+        en: {
+            onlineMode: 'Online', localMode: 'Local', create: 'Create', join: 'Join', leave: 'Leave',
+            start: 'START', new: 'New', undo: 'Undo', reset: 'Reset', clear: 'Clear',
+            first: 'First:', setup: '⚙️ SETUP MODE', yourTurn: '🔥 YOUR TURN!',
+            turn: '♟ TURN:', white: 'WHITE', black: 'BLACK', waiting: '⏳ Turn',
+            history: 'MOVE HISTORY', help: '🌐 Online: Create room → send code → press START | 🏠 Local: Play together on one device',
+            whiteCreator: '🎮 WHITE (creator)', blackGuest: '🎮 BLACK (guest)',
+            noMoves: 'No moves yet', opponentJoined: '✅ Opponent connected!', roomCreated: '✅ Room created! Code: ',
+            roomJoined: '✅ Joined room ', roomNotFound: '❌ Room not found!', roomFull: '❌ Room is full!',
+            needKing: 'Must have 1 white and 1 black king!', clearConfirm: 'Clear board?', resetConfirm: 'Reset position?',
+            newGameConfirm: 'Start a new game? Current game will be lost.'
+        }
+    };
+    
+    let currentLang = 'ru';
+    
+    function updateUILanguage() {
+        const t = translations[currentLang];
+        document.querySelectorAll('.online-mode-text').forEach(el => el.innerText = t.onlineMode);
+        document.querySelectorAll('.local-mode-text').forEach(el => el.innerText = t.localMode);
+        document.querySelectorAll('.create-text').forEach(el => el.innerText = t.create);
+        document.querySelectorAll('.join-text').forEach(el => el.innerText = t.join);
+        document.querySelectorAll('.leave-text').forEach(el => el.innerText = t.leave);
+        document.querySelectorAll('.start-text').forEach(el => el.innerText = t.start);
+        document.querySelectorAll('.new-text').forEach(el => el.innerText = t.new);
+        document.querySelectorAll('.undo-text').forEach(el => el.innerText = t.undo);
+        document.querySelectorAll('.reset-text').forEach(el => el.innerText = t.reset);
+        document.querySelectorAll('.clear-text').forEach(el => el.innerText = t.clear);
+        document.querySelectorAll('.first-move-label').forEach(el => el.innerText = t.first);
+        document.querySelectorAll('.history-title-text').forEach(el => el.innerText = t.history);
+        document.querySelectorAll('.help-text').forEach(el => el.innerText = t.help);
+        document.querySelectorAll('.room-code-label').forEach(el => el.innerText = '🏠 Code:');
+        updateGameStatus();
+    }
+    
     // ---------- FIREBASE КОНФИГУРАЦИЯ ----------
     const firebaseConfig = {
         apiKey: "AIzaSyAnZNTKOI7NhS0ZURZiiF-KjuCGb3rjPlM",
@@ -229,6 +445,48 @@
     let castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
     let waitingForPromotion = false;
 
+    function setupStandardPosition() {
+        board = Array(8).fill().map(() => Array(8).fill(null));
+        for (let i = 0; i < 8; i++) {
+            board[6][i] = { type: 'pawn', color: 'white' };
+            board[1][i] = { type: 'pawn', color: 'black' };
+        }
+        board[7][0] = { type: 'rook', color: 'white' };
+        board[7][1] = { type: 'knight', color: 'white' };
+        board[7][2] = { type: 'bishop', color: 'white' };
+        board[7][3] = { type: 'queen', color: 'white' };
+        board[7][4] = { type: 'king', color: 'white' };
+        board[7][5] = { type: 'bishop', color: 'white' };
+        board[7][6] = { type: 'knight', color: 'white' };
+        board[7][7] = { type: 'rook', color: 'white' };
+        
+        board[0][0] = { type: 'rook', color: 'black' };
+        board[0][1] = { type: 'knight', color: 'black' };
+        board[0][2] = { type: 'bishop', color: 'black' };
+        board[0][3] = { type: 'queen', color: 'black' };
+        board[0][4] = { type: 'king', color: 'black' };
+        board[0][5] = { type: 'bishop', color: 'black' };
+        board[0][6] = { type: 'knight', color: 'black' };
+        board[0][7] = { type: 'rook', color: 'black' };
+        
+        if (gameActive) {
+            gameActive = false;
+            document.getElementById('historyPanel').style.display = 'none';
+        }
+        moveHistory = [];
+        moveNotations = [];
+        currentHistoryIndex = -1;
+        selectedCell = null;
+        possibleMoves = [];
+        currentTurn = firstTurn;
+        enPassantTarget = null;
+        castlingRights = { white: { king: true, queen: true }, black: { king: true, queen: true } };
+        renderBoard();
+        updateHistoryPanel();
+        updateGameStatus();
+        if (isOnlineMode && currentRoomId && database) syncToFirebase();
+    }
+
     function copyBoard(src) {
         return src.map(row => row.map(cell => cell ? { ...cell } : null));
     }
@@ -246,9 +504,11 @@
     
     function dataToBoard(data) {
         const newBoard = Array(8).fill().map(() => Array(8).fill(null));
-        if (!data) return newBoard;
+        if (!data || !Array.isArray(data)) return newBoard;
         for (const item of data) {
-            if (item && item.x >= 0 && item.x < 8 && item.y >= 0 && item.y < 8) {
+            if (item && typeof item.x === 'number' && typeof item.y === 'number' && 
+                item.x >= 0 && item.x < 8 && item.y >= 0 && item.y < 8 &&
+                item.type && item.color) {
                 newBoard[item.x][item.y] = { type: item.type, color: item.color };
             }
         }
@@ -264,12 +524,16 @@
             gameActive: gameActive,
             lastMove: lastMove ? { from: lastMove.from, to: lastMove.to } : null,
             moveNotations: moveNotations || [],
-            enPassantTarget: enPassantTarget,
-            castlingRights: castlingRights,
-            timestamp: Date.now()
+            enPassantTarget: (enPassantTarget && typeof enPassantTarget.x === 'number' && typeof enPassantTarget.y === 'number') 
+                ? { x: enPassantTarget.x, y: enPassantTarget.y } : null,
+            castlingRights: {
+                white: { king: castlingRights.white?.king === true, queen: castlingRights.white?.queen === true },
+                black: { king: castlingRights.black?.king === true, queen: castlingRights.black?.queen === true }
+            }
         };
         
-        database.ref(`rooms/${currentRoomId}/gameState`).set(gameState).catch(e => console.log('Sync error:', e));
+        const cleanState = JSON.parse(JSON.stringify(gameState));
+        database.ref(`rooms/${currentRoomId}/gameState`).set(cleanState).catch(e => console.log('Sync error:', e));
     }
     
     function saveToHistory(notation) {
@@ -277,13 +541,18 @@
             moveHistory = moveHistory.slice(0, currentHistoryIndex + 1);
             moveNotations = moveNotations.slice(0, currentHistoryIndex);
         }
+        
         moveHistory.push({
             board: copyBoard(board),
             enPassantTarget: enPassantTarget ? { x: enPassantTarget.x, y: enPassantTarget.y } : null,
-            castlingRights: { white: { ...castlingRights.white }, black: { ...castlingRights.black } },
+            castlingRights: {
+                white: { ...castlingRights.white },
+                black: { ...castlingRights.black }
+            },
             currentTurn: currentTurn,
             lastMove: lastMove ? { from: [...lastMove.from], to: [...lastMove.to] } : null
         });
+        
         if (notation) moveNotations.push(notation);
         currentHistoryIndex = moveHistory.length - 1;
         updateHistoryPanel();
@@ -295,7 +564,10 @@
         const state = moveHistory[index];
         board = copyBoard(state.board);
         enPassantTarget = state.enPassantTarget ? { x: state.enPassantTarget.x, y: state.enPassantTarget.y } : null;
-        castlingRights = { white: { ...state.castlingRights.white }, black: { ...state.castlingRights.black } };
+        castlingRights = {
+            white: { ...state.castlingRights.white },
+            black: { ...state.castlingRights.black }
+        };
         currentTurn = state.currentTurn;
         lastMove = state.lastMove ? { from: [...state.lastMove.from], to: [...state.lastMove.to] } : null;
         currentHistoryIndex = index;
@@ -346,6 +618,29 @@
                 return (absDx === 2 && absDy === 1) || (absDx === 1 && absDy === 2);
             case 'king':
                 if (Math.max(absDx, absDy) === 1) return true;
+                if (dx === 0 && Math.abs(dy) === 2 && gameActive) {
+                    const row = piece.color === 'white' ? 7 : 0;
+                    if (fromX !== row || fromY !== 4) return false;
+                    const isKingSide = dy === 2;
+                    const rookY = isKingSide ? 7 : 0;
+                    const rook = testBoard[row]?.[rookY];
+                    if (!rook || rook.type !== 'rook' || rook.color !== piece.color) return false;
+                    const betweenY = isKingSide ? [5, 6] : [1, 2, 3];
+                    for (let y of betweenY) {
+                        if (testBoard[row]?.[y]) return false;
+                    }
+                    const rights = piece.color === 'white' ? castlingRights.white : castlingRights.black;
+                    if (isKingSide && !rights.king) return false;
+                    if (!isKingSide && !rights.queen) return false;
+                    for (let step = 0; step <= Math.abs(dy); step++) {
+                        const testY = fromY + (dy > 0 ? step : -step);
+                        const fakeBoard = copyBoard(testBoard);
+                        fakeBoard[row][fromY] = null;
+                        fakeBoard[row][testY] = { type: 'king', color: piece.color };
+                        if (isSquareAttacked(row, testY, piece.color, fakeBoard)) return false;
+                    }
+                    return true;
+                }
                 return false;
             case 'queen':
             case 'rook':
@@ -378,10 +673,40 @@
         const testBoard = copyBoard(board);
         const movingPiece = testBoard[fromX][fromY];
         
-        testBoard[toX][toY] = movingPiece;
-        testBoard[fromX][fromY] = null;
+        if (movingPiece.type === 'king' && Math.abs(toY - fromY) === 2) {
+            const row = movingPiece.color === 'white' ? 7 : 0;
+            const isKingSide = toY > fromY;
+            const rookY = isKingSide ? 7 : 0;
+            const newRookY = isKingSide ? 5 : 3;
+            testBoard[toX][toY] = movingPiece;
+            testBoard[fromX][fromY] = null;
+            testBoard[row][newRookY] = testBoard[row][rookY];
+            testBoard[row][rookY] = null;
+            return !isSquareAttacked(toX, toY, movingPiece.color, testBoard);
+        }
         
-        return !isSquareAttacked(toX, toY, movingPiece.color, testBoard);
+        let isEnPassant = false;
+        if (movingPiece.type === 'pawn' && Math.abs(toY - fromY) === 1 && !testBoard[toX]?.[toY] && enPassantTarget && enPassantTarget.x === toX && enPassantTarget.y === toY) {
+            isEnPassant = true;
+            testBoard[toX][toY] = movingPiece;
+            testBoard[fromX][fromY] = null;
+            testBoard[fromX][toY] = null;
+        } else {
+            testBoard[toX][toY] = movingPiece;
+            testBoard[fromX][fromY] = null;
+        }
+        
+        function getKingPos(col, test) {
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const p = test[i]?.[j];
+                    if (p && p.type === 'king' && p.color === col) return [i, j];
+                }
+            }
+            return [-1, -1];
+        }
+        const kingPos = getKingPos(movingPiece.color, testBoard);
+        return !isSquareAttacked(kingPos[0], kingPos[1], movingPiece.color, testBoard);
     }
 
     function getAllValidMovesForPiece(x, y) {
@@ -397,21 +722,15 @@
     }
 
     function showPromotionDialog(callback) {
-        const overlay = document.createElement('div');
-        overlay.className = 'overlay';
-        const dialog = document.createElement('div');
-        dialog.className = 'promotion-dialog';
-        dialog.innerHTML = `<p>Выберите фигуру:</p>
-            <button data-piece="queen">♕ Ферзь</button>
-            <button data-piece="rook">♖ Ладья</button>
-            <button data-piece="bishop">♗ Слон</button>
-            <button data-piece="knight">♘ Конь</button>`;
-        document.body.appendChild(overlay);
-        document.body.appendChild(dialog);
+        const overlay = document.createElement('div'); overlay.className = 'overlay';
+        const dialog = document.createElement('div'); dialog.className = 'promotion-dialog';
+        dialog.innerHTML = `<p>${currentLang === 'ru' ? 'Выберите фигуру:' : 'Choose piece:'}</p>
+            <button data-piece="queen">♕</button><button data-piece="rook">♖</button>
+            <button data-piece="bishop">♗</button><button data-piece="knight">♘</button>`;
+        document.body.appendChild(overlay); document.body.appendChild(dialog);
         dialog.querySelectorAll('button').forEach(btn => {
             btn.onclick = () => {
-                overlay.remove();
-                dialog.remove();
+                overlay.remove(); dialog.remove();
                 callback(btn.dataset.piece);
             };
         });
@@ -428,13 +747,6 @@
         const isCastle = (piece.type === 'king' && Math.abs(toY - fromY) === 2);
         const isEnPassant = (piece.type === 'pawn' && Math.abs(toY - fromY) === 1 && !board[toX]?.[toY] && enPassantTarget && enPassantTarget.x === toX && enPassantTarget.y === toY);
         
-        const willBeCheck = (() => {
-            const testBoard = copyBoard(board);
-            testBoard[toX][toY] = piece;
-            testBoard[fromX][fromY] = null;
-            return isSquareAttacked(toX, toY, piece.color, testBoard);
-        })();
-        
         const files = 'abcdefgh';
         const ranks = '87654321';
         const pieceSymbols = { king: 'K', queen: 'Q', rook: 'R', bishop: 'B', knight: 'N', pawn: '' };
@@ -442,7 +754,6 @@
         if (piece.type === 'pawn' && (isCapture || isEnPassant)) notation = files[fromY];
         if (isCapture || isEnPassant) notation += 'x';
         notation += files[toY] + ranks[toX];
-        if (willBeCheck) notation += '+';
         if (isCastle) notation = toY === 6 ? '0-0' : '0-0-0';
         
         if (gameActive) saveToHistory(notation);
@@ -553,8 +864,8 @@
                 }
             }
         }
-        if (whiteKings !== 1) { alert('Должен быть 1 белый король!'); return; }
-        if (blackKings !== 1) { alert('Должен быть 1 чёрный король!'); return; }
+        const t = translations[currentLang];
+        if (whiteKings !== 1 || blackKings !== 1) { alert(t.needKing); return; }
         
         initialBoardState = copyBoard(board);
         gameActive = true;
@@ -590,8 +901,9 @@
             item.onclick = () => { if (gameActive) restoreFromHistory(i); };
             historyList.appendChild(item);
         }
+        const t = translations[currentLang];
         if (moveNotations.length === 0) {
-            historyList.innerHTML = '<div style="color: #888; font-size: 11px;">Ходов пока нет</div>';
+            historyList.innerHTML = `<div style="color: #888; font-size: 11px;">${t.noMoves}</div>`;
         }
     }
 
@@ -695,6 +1007,16 @@
         }
     }
     
+    function updateCoordinates() {
+        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        const fileLabels = document.getElementById('fileLabels');
+        if (fileLabels) fileLabels.innerHTML = files.map(f => `<span>${f}</span>`).join('');
+        
+        const ranks = [8, 7, 6, 5, 4, 3, 2, 1];
+        const rankLabels = document.getElementById('rankLabels');
+        if (rankLabels) rankLabels.innerHTML = ranks.map(r => `<span>${r}</span>`).join('');
+    }
+    
     function buildPalette() {
         const palette = ['♔','♕','♖','♗','♘','♙','♚','♛','♜','♝','♞','♟'];
         const container = document.getElementById('piecePalette');
@@ -712,7 +1034,8 @@
             btn.onclick = () => {
                 if (gameActive) return;
                 window.pendingPlacement = sym;
-                alert(`Нажми на клетку, чтобы поставить ${sym}`);
+                const t = translations[currentLang];
+                alert(t.placePiece + sym);
             };
             container.appendChild(btn);
         });
@@ -747,7 +1070,7 @@
     }
     
     async function createRoom() {
-        if (!database) { alert('Firebase не подключен! Проверьте интернет.'); return; }
+        if (!database) { alert('Firebase not connected!'); return; }
         
         const roomCode = generateRoomCode();
         currentRoomId = roomCode;
@@ -775,37 +1098,38 @@
             document.getElementById('roomCodeDisplay').innerText = roomCode;
             document.getElementById('roomInfo').style.display = 'inline-flex';
             document.getElementById('onlineStatus').className = 'online-status waiting';
-            document.getElementById('onlineStatus').innerHTML = '⏳ Ожидание игрока...';
+            document.getElementById('onlineStatus').innerHTML = '⏳';
             document.getElementById('playerRoleDisplay').style.display = 'block';
-            document.getElementById('playerRoleDisplay').innerHTML = '🎮 Ваша роль: БЕЛЫЕ (создатель)';
+            const t = translations[currentLang];
+            document.getElementById('playerRoleDisplay').innerHTML = t.whiteCreator;
             
             listenToFirebase();
-            alert(`✅ Комната создана! Код: ${roomCode}\nОтправьте этот код ученику.`);
+            alert(t.roomCreated + roomCode);
             
             database.ref(`rooms/${roomCode}/blackPlayer`).on('value', (snapshot) => {
                 if (snapshot.val()) {
                     document.getElementById('onlineStatus').className = 'online-status connected';
-                    document.getElementById('onlineStatus').innerHTML = '✅ Противник подключён!';
-                    alert('✅ Противник подключился! Можете начинать игру.');
+                    document.getElementById('onlineStatus').innerHTML = '✅';
+                    alert(t.opponentJoined);
                 }
             });
         } catch(e) {
-            console.error('Create room error:', e);
-            alert('Ошибка создания комнаты: ' + e.message);
+            alert('Error: ' + e.message);
         }
     }
     
     async function joinRoom() {
         const roomCode = document.getElementById('roomCodeInput').value.toUpperCase().trim();
-        if (!roomCode) { alert('Введите код комнаты!'); return; }
-        if (!database) { alert('Firebase не подключен!'); return; }
+        if (!roomCode) { alert('Enter room code!'); return; }
+        if (!database) { alert('Firebase not connected!'); return; }
         
         try {
             const roomRef = database.ref(`rooms/${roomCode}`);
             const snapshot = await roomRef.get();
+            const t = translations[currentLang];
             
-            if (!snapshot.exists()) { alert('❌ Комната не найдена!'); return; }
-            if (snapshot.val().blackPlayer) { alert('❌ Комната уже заполнена!'); return; }
+            if (!snapshot.exists()) { alert(t.roomNotFound); return; }
+            if (snapshot.val().blackPlayer) { alert(t.roomFull); return; }
             
             currentRoomId = roomCode;
             myPlayerId = auth?.currentUser?.uid || 'player_' + Date.now();
@@ -821,8 +1145,6 @@
                 gameActive = roomData.gameState.gameActive;
                 lastMove = roomData.gameState.lastMove;
                 moveNotations = roomData.gameState.moveNotations || [];
-                enPassantTarget = roomData.gameState.enPassantTarget;
-                castlingRights = roomData.gameState.castlingRights || { white: { king: true, queen: true }, black: { king: true, queen: true } };
                 renderBoard();
                 updateHistoryPanel();
                 updateGameStatus();
@@ -831,15 +1153,14 @@
             document.getElementById('roomCodeDisplay').innerText = roomCode;
             document.getElementById('roomInfo').style.display = 'inline-flex';
             document.getElementById('onlineStatus').className = 'online-status connected';
-            document.getElementById('onlineStatus').innerHTML = '✅ Подключено!';
+            document.getElementById('onlineStatus').innerHTML = '✅';
             document.getElementById('playerRoleDisplay').style.display = 'block';
-            document.getElementById('playerRoleDisplay').innerHTML = '🎮 Ваша роль: ЧЁРНЫЕ (гость)';
+            document.getElementById('playerRoleDisplay').innerHTML = t.blackGuest;
             
             listenToFirebase();
-            alert(`✅ Вы присоединились к комнате ${roomCode}!`);
+            alert(t.roomJoined + roomCode);
         } catch(e) {
-            console.error('Join room error:', e);
-            alert('Ошибка подключения: ' + e.message);
+            alert('Error: ' + e.message);
         }
     }
     
@@ -850,26 +1171,26 @@
         isOnlineMode = false;
         document.getElementById('roomInfo').style.display = 'none';
         document.getElementById('onlineStatus').className = 'online-status waiting';
-        document.getElementById('onlineStatus').innerHTML = '⚪ Не в сети';
+        document.getElementById('onlineStatus').innerHTML = '⚪';
         document.getElementById('playerRoleDisplay').style.display = 'none';
         if (firebaseListener) firebaseListener();
-        alert('Вы вышли из комнаты');
     }
     
     function copyRoomCode() {
         const code = document.getElementById('roomCodeDisplay').innerText;
         navigator.clipboard.writeText(code);
-        alert('📋 Код скопирован!');
+        alert('📋 Code copied!');
     }
     
     function updateGameStatus() {
         const statusDiv = document.getElementById('gameStatus');
+        const t = translations[currentLang];
         if (!gameActive) {
-            statusDiv.innerHTML = '⚙️ РЕЖИМ РАССТАНОВКИ';
+            statusDiv.innerHTML = t.setup;
         } else if (isOnlineMode && myRole) {
-            statusDiv.innerHTML = currentTurn === myRole ? '🔥 ВАШ ХОД!' : `⏳ Ход ${currentTurn === 'white' ? 'БЕЛЫХ' : 'ЧЁРНЫХ'}`;
+            statusDiv.innerHTML = currentTurn === myRole ? t.yourTurn : `${t.waiting} ${currentTurn === 'white' ? t.white : t.black}`;
         } else {
-            statusDiv.innerHTML = `♟ ИГРА ИДЕТ, ход: ${currentTurn === 'white' ? '⚪ белые' : '⚫ черные'}`;
+            statusDiv.innerHTML = `${t.turn} ${currentTurn === 'white' ? t.white : t.black}`;
         }
     }
     
@@ -895,13 +1216,8 @@
     // ---------- ИНИЦИАЛИЗАЦИЯ ----------
     function init() {
         buildPalette();
-        // Начальная позиция с двумя королями и пешками
-        board[7][4] = { type: 'king', color: 'white' };
-        board[0][4] = { type: 'king', color: 'black' };
-        board[6][4] = { type: 'pawn', color: 'white' };
-        board[1][4] = { type: 'pawn', color: 'black' };
-        renderBoard();
-        initialBoardState = copyBoard(board);
+        updateCoordinates();
+        setupStandardPosition();
         
         document.getElementById('onlineModeBtn').onclick = switchToOnlineMode;
         document.getElementById('localModeBtn').onclick = switchToLocalMode;
@@ -918,14 +1234,42 @@
         };
         
         document.getElementById('startGameBtn').onclick = startGame;
+        document.getElementById('newGameBtn').onclick = () => { 
+            const t = translations[currentLang];
+            if (gameActive && !confirm(t.newGameConfirm)) return;
+            setupStandardPosition();
+        };
         document.getElementById('undoBtn').onclick = undoMove;
-        document.getElementById('resetBtn').onclick = () => { if (confirm('Сбросить позицию?')) resetToInitial(); };
-        document.getElementById('clearBoardBtn').onclick = () => { if (!gameActive && confirm('Очистить доску?')) clearBoard(); };
+        document.getElementById('resetBtn').onclick = () => { 
+            const t = translations[currentLang];
+            if (confirm(t.resetConfirm)) resetToInitial(); 
+        };
+        document.getElementById('clearBoardBtn').onclick = () => { 
+            const t = translations[currentLang];
+            if (!gameActive && confirm(t.clearConfirm)) clearBoard(); 
+        };
         
         document.getElementById('createRoomBtn').onclick = createRoom;
         document.getElementById('joinRoomBtn').onclick = joinRoom;
         document.getElementById('leaveRoomBtn').onclick = leaveRoom;
         document.getElementById('copyRoomCodeBtn').onclick = copyRoomCode;
+        
+        document.getElementById('langRu').onclick = () => {
+            currentLang = 'ru';
+            document.getElementById('langRu').classList.add('active-lang');
+            document.getElementById('langEn').classList.remove('active-lang');
+            updateUILanguage();
+            updateGameStatus();
+            updateHistoryPanel();
+        };
+        document.getElementById('langEn').onclick = () => {
+            currentLang = 'en';
+            document.getElementById('langEn').classList.add('active-lang');
+            document.getElementById('langRu').classList.remove('active-lang');
+            updateUILanguage();
+            updateGameStatus();
+            updateHistoryPanel();
+        };
         
         const boardEl = document.getElementById('board');
         boardEl.addEventListener('dragover', e => e.preventDefault());
@@ -952,6 +1296,9 @@
             origHandler(x, y);
         };
         handleCellClick = window.handleCellClick;
+        
+        renderBoard();
+        updateUILanguage();
     }
     
     init();
