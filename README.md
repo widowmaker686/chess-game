@@ -53,7 +53,7 @@
 MIT
 
 ## Начать игру
-- https://widowmaker686.github.io/chess-game/
+https://widowmaker686.github.io/chess-game/
 
 
 # Chess Sandbox — Interactive Board for Trainers
@@ -111,4 +111,4 @@ Interactive chess board for online and offline training. Create any positions, p
 MIT
 
 ## Start Game
-- https://widowmaker686.github.io/chess-game/
+https://widowmaker686.github.io/chess-game/
